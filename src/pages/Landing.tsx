@@ -27,17 +27,17 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="gradient-hero min-h-[70vh] flex flex-col">
+      {/* Hero Section - Midnight Utility */}
+      <div className="gradient-midnight min-h-[70vh] flex flex-col">
         {/* Header */}
         <header className="flex items-center justify-between p-4 safe-top">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">Q</span>
+            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+              <span className="text-primary font-bold text-lg">Q</span>
             </div>
-            <span className="font-bold text-xl text-foreground">QUT</span>
+            <span className="font-bold text-xl text-white">QUT</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/auth')}>
+          <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10" onClick={() => navigate('/auth')}>
             Sign In
           </Button>
         </header>
@@ -49,11 +49,11 @@ const Landing = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
               Quick Utility Tasks
-              <span className="block text-gradient mt-2">Done Right</span>
+              <span className="block text-accent mt-2">Done Right</span>
             </h1>
-            <p className="text-muted-foreground text-lg mt-4 max-w-md mx-auto">
+            <p className="text-white/70 text-lg mt-4 max-w-md mx-auto">
               Connect with verified service providers for any task, online or offline.
             </p>
           </motion.div>
@@ -98,8 +98,8 @@ const Landing = () => {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card variant="elevated" className="p-4 flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center flex-shrink-0">
-                    <feature.icon className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <feature.icon className="w-6 h-6 text-accent" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">{feature.title}</h3>
@@ -120,12 +120,12 @@ const Landing = () => {
         <div className="grid gap-4">
           <Card
             variant="interactive"
-            className="p-6 border-2 border-transparent hover:border-primary transition-colors"
+            className="p-6 border-2 border-transparent hover:border-accent transition-colors"
             onClick={() => navigate('/onboarding')}
           >
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary-light flex items-center justify-center">
-                <Briefcase className="w-7 h-7 text-primary" />
+              <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center">
+                <Briefcase className="w-7 h-7 text-accent" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-lg text-foreground">I Need Help</h3>

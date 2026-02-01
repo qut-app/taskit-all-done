@@ -35,7 +35,7 @@ const BottomNavigation = () => {
               to={item.path}
               className={cn(
                 'flex flex-col items-center justify-center flex-1 h-full transition-colors',
-                isActive ? 'text-primary' : 'text-muted-foreground'
+                isActive ? 'text-accent' : 'text-muted-foreground'
               )}
             >
               <item.icon
