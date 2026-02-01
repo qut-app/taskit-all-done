@@ -9,31 +9,20 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Midnight Blue - App shell, headers
         default:
-          "bg-primary text-primary-foreground shadow-md hover:bg-primary-dark",
+          "bg-primary text-primary-foreground shadow-primary hover:bg-primary-dark",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        // Electric Teal outline  
         outline:
-          "border-2 border-accent text-accent bg-transparent hover:bg-accent/10",
-        // Warm Amber
+          "border-2 border-primary text-primary bg-transparent hover:bg-primary-light",
         secondary:
           "bg-secondary text-secondary-foreground shadow-secondary hover:bg-secondary/90",
         ghost: "hover:bg-muted hover:text-foreground",
-        link: "text-accent underline-offset-4 hover:underline",
-        // Electric Teal gradient - Primary CTAs (Post Job, Accept Job, Upgrade)
-        hero: "bg-accent text-primary shadow-primary hover:bg-accent/90 transition-all",
-        // Soft Electric Teal
-        soft: "bg-accent/10 text-accent hover:bg-accent/20",
-        // Soft Warm Amber
-        softSecondary: "bg-secondary/10 text-secondary hover:bg-secondary/20",
-        // Success
+        link: "text-primary underline-offset-4 hover:underline",
+        hero: "gradient-primary text-primary-foreground shadow-primary hover:shadow-lg transition-shadow",
+        soft: "bg-primary-light text-primary hover:bg-primary/20",
+        softSecondary: "bg-secondary-light text-secondary-foreground hover:bg-secondary/20",
         success: "bg-success text-success-foreground hover:bg-success/90",
-        // Electric Teal solid - for verified badges, active states
-        teal: "bg-accent text-primary hover:bg-accent/90",
-        // Midnight solid
-        midnight: "bg-primary text-primary-foreground hover:bg-primary-dark",
       },
       size: {
         default: "h-11 px-5 py-2.5",

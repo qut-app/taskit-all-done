@@ -37,8 +37,8 @@ const Dashboard = () => {
             className="p-4"
             onClick={() => navigate('/post-job')}
           >
-            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
-              <Briefcase className="w-6 h-6 text-accent" />
+            <div className="w-12 h-12 rounded-xl bg-primary-light flex items-center justify-center mb-3">
+              <Briefcase className="w-6 h-6 text-primary" />
             </div>
             <h3 className="font-semibold text-foreground">Post a Job</h3>
             <p className="text-xs text-muted-foreground mt-1">Get help today</p>
@@ -49,7 +49,7 @@ const Dashboard = () => {
             className="p-4"
             onClick={() => navigate('/discover')}
           >
-            <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
+            <div className="w-12 h-12 rounded-xl bg-secondary-light flex items-center justify-center mb-3">
               <Users className="w-6 h-6 text-secondary" />
             </div>
             <h3 className="font-semibold text-foreground">Find Providers</h3>
@@ -87,7 +87,7 @@ const Dashboard = () => {
           {mockProviders.filter(p => p.isRecommended).map((provider) => (
             <Card key={provider.id} variant="elevated" className="flex-shrink-0 w-48 p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold">
+                <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold">
                   {provider.fullName.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -113,14 +113,11 @@ const Dashboard = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card variant="gradient" className="p-4 text-center">
-          <div className="text-2xl font-bold text-accent">2/3</div>
+          <div className="text-2xl font-bold text-primary">2/3</div>
           <div className="text-xs text-muted-foreground mt-1">Active Slots</div>
         </Card>
         <Card variant="gradient" className="p-4 text-center">
-          <div className="flex items-center justify-center gap-1 text-2xl font-bold text-secondary">
-            <Star className="w-5 h-5 fill-secondary" />
-            4.8
-          </div>
+          <div className="text-2xl font-bold text-foreground">4.8</div>
           <div className="text-xs text-muted-foreground mt-1">Rating</div>
         </Card>
         <Card variant="gradient" className="p-4 text-center">
@@ -130,16 +127,16 @@ const Dashboard = () => {
       </div>
 
       {/* Upgrade Banner */}
-      <Card className="p-4 bg-accent">
+      <Card className="p-4 gradient-primary">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-primary" />
+          <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+            <Zap className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-primary">Boost Your Slots</h3>
-            <p className="text-sm text-primary/80">Get more job capacity</p>
+            <h3 className="font-semibold text-primary-foreground">Boost Your Slots</h3>
+            <p className="text-sm text-primary-foreground/80">Get more job capacity</p>
           </div>
-          <Button variant="midnight" size="sm">
+          <Button variant="secondary" size="sm">
             ₦4,000/mo
           </Button>
         </div>

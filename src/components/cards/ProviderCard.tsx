@@ -16,12 +16,12 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
       <div className="flex gap-4">
         {/* Avatar */}
         <div className="relative flex-shrink-0">
-          <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-xl">
+          <div className="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-xl">
             {provider.fullName.charAt(0)}
           </div>
           {provider.verificationStatus === 'verified' && (
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
-              <CheckCircle className="w-3 h-3 text-primary" />
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full flex items-center justify-center">
+              <CheckCircle className="w-3 h-3 text-success-foreground" />
             </div>
           )}
         </div>
@@ -81,7 +81,7 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
         <Button variant="outline" className="flex-1" onClick={onView}>
           View Profile
         </Button>
-        <Button variant="hero" className="flex-1" onClick={onHire}>
+        <Button className="flex-1" onClick={onHire}>
           Hire Now
         </Button>
       </div>

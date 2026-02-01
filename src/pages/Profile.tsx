@@ -53,12 +53,12 @@ const Profile = () => {
         <Card variant="elevated" className="p-5">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-accent font-bold text-2xl">
+              <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold text-2xl">
                 {user?.fullName?.charAt(0) || 'U'}
               </div>
               {user?.verificationStatus === 'verified' && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-accent rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-primary" />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-success-foreground" />
                 </div>
               )}
             </div>
@@ -93,8 +93,8 @@ const Profile = () => {
         {/* Role Switch */}
         <Card variant="interactive" className="p-4" onClick={handleSwitchRole}>
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-accent" />
+            <div className="w-12 h-12 rounded-xl bg-secondary-light flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-secondary" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-foreground">Switch Role</h3>
@@ -110,8 +110,8 @@ const Profile = () => {
         {currentRole === 'provider' && (
           <div className="grid grid-cols-3 gap-3">
             <Card variant="gradient" className="p-4 text-center">
-              <div className="flex items-center justify-center gap-1 text-xl font-bold text-secondary">
-                <Star className="w-5 h-5 fill-secondary" />
+              <div className="flex items-center justify-center gap-1 text-xl font-bold text-foreground">
+                <Star className="w-5 h-5 text-secondary fill-secondary" />
                 4.8
               </div>
               <div className="text-xs text-muted-foreground mt-1">Rating</div>
