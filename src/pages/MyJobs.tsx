@@ -1,21 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import JobCard from '@/components/cards/JobCard';
-import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useJobs } from '@/hooks/useJobs';
 
 const MyJobs = () => {
-  const { jobs, currentRole } = useApp();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
+  const { myJobs, myApplications, loading: jobsLoading } = useJobs();
   const [activeTab, setActiveTab] = useState('active');
 
-  // Filter jobs based on role
-  const myJobs = currentRole === 'requester' 
-    ? jobs.filter(j => j.requesterId === 'current-user' || j.requesterId === 'user1' || j.requesterId === 'user2')
-    : jobs.filter(j => j.assignedProviderId === '3' || j.status === 'assigned');
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
-  const activeJobs = myJobs.filter(j => j.status === 'open' || j.status === 'assigned' || j.status === 'in_progress');
-  const completedJobs = myJobs.filter(j => j.status === 'completed');
-  const cancelledJobs = myJobs.filter(j => j.status === 'cancelled');
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const isProvider = profile?.active_role === 'provider';
+
+  // For requesters: show jobs they posted
+  // For providers: show jobs they applied to
+  const jobs = isProvider 
+    ? myApplications.map(app => ({ ...app.job, application_status: app.status })).filter(Boolean)
+    : myJobs;
+
+  const activeJobs = jobs.filter(j => j && (j.status === 'open' || j.status === 'assigned' || j.status === 'in_progress'));
+  const completedJobs = jobs.filter(j => j && j.status === 'completed');
+  const cancelledJobs = jobs.filter(j => j && j.status === 'cancelled');
 
   return (
     <MobileLayout>
@@ -23,7 +48,7 @@ const MyJobs = () => {
       <header className="p-4 safe-top">
         <h1 className="text-2xl font-bold text-foreground">My Jobs</h1>
         <p className="text-muted-foreground">
-          {currentRole === 'requester' ? 'Track your posted jobs' : 'Manage your assigned jobs'}
+          {isProvider ? 'Manage your applications' : 'Track your posted jobs'}
         </p>
       </header>
 
@@ -43,9 +68,13 @@ const MyJobs = () => {
           </TabsList>
 
           <TabsContent value="active" className="mt-4 space-y-3">
-            {activeJobs.length > 0 ? (
+            {jobsLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : activeJobs.length > 0 ? (
               activeJobs.map((job) => (
-                <JobCard key={job.id} job={job} showActions={false} />
+                job && <JobCard key={job.id} job={job as any} showActions={false} />
               ))
             ) : (
               <div className="text-center py-12">
@@ -57,7 +86,7 @@ const MyJobs = () => {
           <TabsContent value="completed" className="mt-4 space-y-3">
             {completedJobs.length > 0 ? (
               completedJobs.map((job) => (
-                <JobCard key={job.id} job={job} showActions={false} />
+                job && <JobCard key={job.id} job={job as any} showActions={false} />
               ))
             ) : (
               <div className="text-center py-12">
@@ -69,7 +98,7 @@ const MyJobs = () => {
           <TabsContent value="cancelled" className="mt-4 space-y-3">
             {cancelledJobs.length > 0 ? (
               cancelledJobs.map((job) => (
-                <JobCard key={job.id} job={job} showActions={false} />
+                job && <JobCard key={job.id} job={job as any} showActions={false} />
               ))
             ) : (
               <div className="text-center py-12">

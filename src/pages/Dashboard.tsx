@@ -1,30 +1,60 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
-  ArrowUpRight, 
   Briefcase, 
   Users, 
   Star, 
-  Clock, 
-  TrendingUp,
+  Zap,
   CheckCircle,
   AlertCircle,
-  Zap
+  Loader2,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import MobileLayout from '@/components/navigation/MobileLayout';
-import { useApp, mockProviders } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useJobs } from '@/hooks/useJobs';
+import { useProviders } from '@/hooks/useProviders';
+import { useAdmin } from '@/hooks/useAdmin';
 import JobCard from '@/components/cards/JobCard';
+import ProviderCard from '@/components/cards/ProviderCard';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, currentRole, jobs } = useApp();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, providerProfile, loading: profileLoading } = useProfile();
+  const { jobs, myJobs, loading: jobsLoading } = useJobs();
+  const { providers, loading: providersLoading } = useProviders();
+  const { isAdmin } = useAdmin();
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
+
+  const isProvider = profile.active_role === 'provider';
   const openJobs = jobs.filter(j => j.status === 'open');
-  const assignedJobs = jobs.filter(j => j.status === 'assigned' || j.status === 'in_progress');
+  const assignedJobs = myJobs.filter(j => j.status === 'assigned' || j.status === 'in_progress');
+  const recommendedProviders = providers.filter(p => p.is_recommended).slice(0, 5);
 
   const renderRequesterDashboard = () => (
     <div className="space-y-6">
@@ -76,35 +106,39 @@ const Dashboard = () => {
       )}
 
       {/* Recommended Providers */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-foreground">Top Providers</h2>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/discover')}>
-            See All
-          </Button>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {mockProviders.filter(p => p.isRecommended).map((provider) => (
-            <Card key={provider.id} variant="elevated" className="flex-shrink-0 w-48 p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold">
-                  {provider.fullName.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-foreground text-sm truncate">{provider.fullName}</h3>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="w-3 h-3 text-secondary fill-secondary" />
-                    <span>{provider.rating}</span>
+      {recommendedProviders.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-foreground">Top Providers</h2>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/discover')}>
+              See All
+            </Button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {recommendedProviders.map((provider) => (
+              <Card key={provider.id} variant="elevated" className="flex-shrink-0 w-48 p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center text-primary font-bold">
+                    {provider.profile?.full_name?.charAt(0) || 'P'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground text-sm truncate">
+                      {provider.profile?.full_name || 'Provider'}
+                    </h3>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Star className="w-3 h-3 text-secondary fill-secondary" />
+                      <span>{provider.rating || 0}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <Badge variant="soft" className="text-xs">
-                {provider.serviceCategories[0]}
-              </Badge>
-            </Card>
-          ))}
-        </div>
-      </section>
+                <Badge variant="soft" className="text-xs">
+                  {provider.service_categories?.[0] || 'Services'}
+                </Badge>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 
@@ -113,34 +147,42 @@ const Dashboard = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <Card variant="gradient" className="p-4 text-center">
-          <div className="text-2xl font-bold text-primary">2/3</div>
+          <div className="text-2xl font-bold text-primary">
+            {providerProfile?.active_job_slots || 0}/{providerProfile?.max_job_slots || 3}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">Active Slots</div>
         </Card>
         <Card variant="gradient" className="p-4 text-center">
-          <div className="text-2xl font-bold text-foreground">4.8</div>
+          <div className="text-2xl font-bold text-foreground">
+            {providerProfile?.rating || 0}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">Rating</div>
         </Card>
         <Card variant="gradient" className="p-4 text-center">
-          <div className="text-2xl font-bold text-success">96%</div>
+          <div className="text-2xl font-bold text-success">
+            {providerProfile?.on_time_delivery_score || 100}%
+          </div>
           <div className="text-xs text-muted-foreground mt-1">On-Time</div>
         </Card>
       </div>
 
       {/* Upgrade Banner */}
-      <Card className="p-4 gradient-primary">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-primary-foreground" />
+      {!providerProfile?.is_premium && (
+        <Card className="p-4 gradient-primary">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-primary-foreground">Boost Your Slots</h3>
+              <p className="text-sm text-primary-foreground/80">Get more job capacity</p>
+            </div>
+            <Button variant="secondary" size="sm">
+              ₦4,000/mo
+            </Button>
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-primary-foreground">Boost Your Slots</h3>
-            <p className="text-sm text-primary-foreground/80">Get more job capacity</p>
-          </div>
-          <Button variant="secondary" size="sm">
-            ₦4,000/mo
-          </Button>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Available Jobs */}
       <section>
@@ -151,9 +193,17 @@ const Dashboard = () => {
           </Button>
         </div>
         <div className="space-y-3">
-          {openJobs.slice(0, 3).map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+          {jobsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : openJobs.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No jobs available yet</p>
+          ) : (
+            openJobs.slice(0, 3).map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))
+          )}
         </div>
       </section>
     </div>
@@ -166,20 +216,25 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">Welcome back,</p>
-            <h1 className="text-xl font-bold text-foreground">{user?.fullName || 'User'}</h1>
+            <h1 className="text-xl font-bold text-foreground">{profile.full_name}</h1>
           </div>
           <div className="flex items-center gap-2">
-            {user?.verificationStatus === 'pending' && (
+            {profile.verification_status === 'pending' && (
               <Badge variant="warning" className="gap-1">
                 <AlertCircle className="w-3 h-3" />
                 Pending
               </Badge>
             )}
-            {user?.verificationStatus === 'verified' && (
+            {profile.verification_status === 'verified' && (
               <Badge variant="verified" className="gap-1">
                 <CheckCircle className="w-3 h-3" />
                 Verified
               </Badge>
+            )}
+            {isAdmin && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
+                <Settings className="w-5 h-5" />
+              </Button>
             )}
             <Button variant="ghost" size="icon">
               <Bell className="w-5 h-5" />
@@ -190,7 +245,7 @@ const Dashboard = () => {
 
       {/* Content */}
       <div className="px-4 pb-4">
-        {currentRole === 'provider' ? renderProviderDashboard() : renderRequesterDashboard()}
+        {isProvider ? renderProviderDashboard() : renderRequesterDashboard()}
       </div>
     </MobileLayout>
   );
