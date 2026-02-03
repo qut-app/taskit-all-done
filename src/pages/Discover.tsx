@@ -1,28 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, MapPin, Star, Wifi, Map } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Wifi, Map, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import ProviderCard from '@/components/cards/ProviderCard';
-import { SERVICE_CATEGORIES, mockProviders } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProviders } from '@/hooks/useProviders';
+import { useCategories } from '@/hooks/useCategories';
 
 const Discover = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { categories } = useCategories();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<'all' | 'online' | 'offline'>('all');
-
-  const filteredProviders = mockProviders.filter((provider) => {
-    const matchesSearch = provider.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.serviceCategories.some(c => c.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = !selectedCategory || provider.serviceCategories.includes(selectedCategory);
-    const matchesMode = serviceMode === 'all' || 
-      provider.serviceMode === serviceMode || 
-      provider.serviceMode === 'both';
-    
-    return matchesSearch && matchesCategory && matchesMode;
+  
+  const { providers, loading: providersLoading } = useProviders({
+    category: selectedCategory || undefined,
+    serviceMode: serviceMode === 'all' ? undefined : serviceMode,
   });
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  const filteredProviders = providers.filter((provider) => {
+    if (!searchQuery) return true;
+    const matchesName = provider.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = (provider.service_categories || []).some(
+      c => c.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    return matchesName || matchesCategory;
+  });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <MobileLayout>
@@ -83,15 +107,15 @@ const Discover = () => {
           >
             All
           </Button>
-          {SERVICE_CATEGORIES.slice(0, 8).map((category) => (
+          {categories.slice(0, 8).map((category) => (
             <Button
-              key={category}
-              variant={selectedCategory === category ? 'soft' : 'outline'}
+              key={category.id}
+              variant={selectedCategory === category.name ? 'soft' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => setSelectedCategory(category.name)}
               className="flex-shrink-0"
             >
-              {category}
+              {category.name}
             </Button>
           ))}
         </div>
@@ -109,18 +133,22 @@ const Discover = () => {
           </Button>
         </div>
 
-        {filteredProviders.map((provider, index) => (
-          <motion.div
-            key={provider.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <ProviderCard provider={provider} />
-          </motion.div>
-        ))}
-
-        {filteredProviders.length === 0 && (
+        {providersLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredProviders.length > 0 ? (
+          filteredProviders.map((provider, index) => (
+            <motion.div
+              key={provider.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <ProviderCard provider={provider} />
+            </motion.div>
+          ))
+        ) : (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
               <Search className="w-8 h-8 text-muted-foreground" />

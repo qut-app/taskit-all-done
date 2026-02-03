@@ -1,52 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { SERVICE_CATEGORIES, DELIVERY_TIMES, useApp } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useJobs } from '@/hooks/useJobs';
+import { useCategories } from '@/hooks/useCategories';
+import { useToast } from '@/hooks/use-toast';
+
+const DELIVERY_TIMES = ['1 day', '2 days', '3 days', '1 week', '2 weeks', '1 month'];
 
 const PostJob = () => {
   const navigate = useNavigate();
-  const { jobs, setJobs } = useApp();
+  const { user, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
+  const { createJob } = useJobs();
+  const { categories } = useCategories();
+  const { toast } = useToast();
+
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
-    serviceMode: 'offline' as 'online' | 'offline',
+    serviceMode: 'offline' as 'online' | 'offline' | 'both',
     location: '',
     expectedDeliveryTime: '3 days',
     budget: '',
   });
 
-  const handleSubmit = () => {
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  const handleSubmit = async () => {
+    // Check verification status
+    if (profile?.verification_status !== 'verified') {
+      toast({
+        title: 'Verification Required',
+        description: 'You need to be verified to post jobs. Please complete your verification.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const newJob = {
-        id: String(Date.now()),
-        requesterId: 'current-user',
-        requesterName: 'You',
+
+    try {
+      const { error } = await createJob({
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        serviceMode: formData.serviceMode,
-        location: formData.location,
-        expectedDeliveryTime: formData.expectedDeliveryTime,
-        status: 'open' as const,
-        budget: formData.budget ? parseInt(formData.budget) : undefined,
-        createdAt: new Date().toISOString().split('T')[0],
-      };
+        service_mode: formData.serviceMode,
+        location: formData.serviceMode === 'offline' ? formData.location : null,
+        expected_delivery_time: formData.expectedDeliveryTime,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+      });
+
+      if (error) throw error;
       
-      setJobs([newJob, ...jobs]);
-      setIsLoading(false);
       setStep('success');
-    }, 1500);
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to post job',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (step === 'success') {
     return (
@@ -109,6 +147,15 @@ const PostJob = () => {
         <h1 className="font-semibold text-lg">Post a Job</h1>
       </header>
 
+      {/* Verification Warning */}
+      {profile?.verification_status !== 'verified' && (
+        <div className="mx-4 mt-4 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+          <p className="text-sm text-warning">
+            You need to be verified to post jobs. Complete your profile verification first.
+          </p>
+        </div>
+      )}
+
       {/* Form */}
       <div className="p-4 space-y-6">
         {/* Title */}
@@ -126,15 +173,15 @@ const PostJob = () => {
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Category</label>
           <div className="flex flex-wrap gap-2">
-            {SERVICE_CATEGORIES.slice(0, 12).map((category) => (
+            {categories.slice(0, 12).map((category) => (
               <Button
-                key={category}
+                key={category.id}
                 type="button"
-                variant={formData.category === category ? 'soft' : 'outline'}
+                variant={formData.category === category.name ? 'soft' : 'outline'}
                 size="sm"
-                onClick={() => setFormData({ ...formData, category })}
+                onClick={() => setFormData({ ...formData, category: category.name })}
               >
-                {category}
+                {category.name}
               </Button>
             ))}
           </div>

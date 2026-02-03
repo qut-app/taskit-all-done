@@ -1,28 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Wifi, Map } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Wifi, Map, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import JobCard from '@/components/cards/JobCard';
-import { useApp, SERVICE_CATEGORIES } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useJobs } from '@/hooks/useJobs';
+import { useCategories } from '@/hooks/useCategories';
+import { useToast } from '@/hooks/use-toast';
 
 const FindJobs = () => {
-  const { jobs } = useApp();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { jobs, loading: jobsLoading, applyToJob } = useJobs();
+  const { categories } = useCategories();
+  const { toast } = useToast();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<'all' | 'online' | 'offline'>('all');
 
-  const openJobs = jobs.filter((job) => job.status === 'open');
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
 
-  const filteredJobs = openJobs.filter((job) => {
+  const filteredJobs = jobs.filter((job) => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (job.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || job.category === selectedCategory;
-    const matchesMode = serviceMode === 'all' || job.serviceMode === serviceMode;
+    const matchesMode = serviceMode === 'all' || job.service_mode === serviceMode || job.service_mode === 'both';
     
     return matchesSearch && matchesCategory && matchesMode;
   });
+
+  const handleApply = async (jobId: string) => {
+    const { error } = await applyToJob(jobId);
+    if (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Applied!',
+        description: 'Your application has been submitted.',
+      });
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <MobileLayout>
@@ -83,15 +121,15 @@ const FindJobs = () => {
           >
             All
           </Button>
-          {SERVICE_CATEGORIES.slice(0, 8).map((category) => (
+          {categories.slice(0, 8).map((category) => (
             <Button
-              key={category}
-              variant={selectedCategory === category ? 'soft' : 'outline'}
+              key={category.id}
+              variant={selectedCategory === category.name ? 'soft' : 'outline'}
               size="sm"
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => setSelectedCategory(category.name)}
               className="flex-shrink-0"
             >
-              {category}
+              {category.name}
             </Button>
           ))}
         </div>
@@ -109,18 +147,25 @@ const FindJobs = () => {
           </Button>
         </div>
 
-        {filteredJobs.map((job, index) => (
-          <motion.div
-            key={job.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <JobCard job={job} />
-          </motion.div>
-        ))}
-
-        {filteredJobs.length === 0 && (
+        {jobsLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredJobs.length > 0 ? (
+          filteredJobs.map((job, index) => (
+            <motion.div
+              key={job.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <JobCard 
+                job={job} 
+                onApply={() => handleApply(job.id)}
+              />
+            </motion.div>
+          ))
+        ) : (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
               <Search className="w-8 h-8 text-muted-foreground" />

@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, MapPin, Camera, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { useApp, SERVICE_CATEGORIES, DELIVERY_TIMES } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useCategories } from '@/hooks/useCategories';
+import { useToast } from '@/hooks/use-toast';
 
 type OnboardingStep = 'personal' | 'location' | 'verification' | 'provider-setup' | 'complete';
 
+const DELIVERY_TIMES = ['1 day', '2 days', '3 days', '1 week', '2 weeks', '1 month'];
+
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { user, setUser, currentRole } = useApp();
+  const { user, loading: authLoading } = useAuth();
+  const { profile, updateProfile, createProviderProfile, loading: profileLoading } = useProfile();
+  const { categories } = useCategories();
+  const { toast } = useToast();
+
   const [step, setStep] = useState<OnboardingStep>('personal');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'requester' | 'provider'>('requester');
   const [formData, setFormData] = useState({
     fullName: '',
     dateOfBirth: '',
@@ -26,7 +36,26 @@ const Onboarding = () => {
     deliveryTime: '3 days',
   });
 
-  const steps: OnboardingStep[] = currentRole === 'provider' 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Pre-fill form with profile data
+  useEffect(() => {
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: profile.full_name || prev.fullName,
+        location: profile.location || prev.location,
+        dateOfBirth: profile.date_of_birth || prev.dateOfBirth,
+      }));
+    }
+  }, [profile]);
+
+  const steps: OnboardingStep[] = selectedRole === 'provider' 
     ? ['personal', 'location', 'verification', 'provider-setup', 'complete']
     : ['personal', 'location', 'verification', 'complete'];
 
@@ -49,24 +78,49 @@ const Onboarding = () => {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setUser({
-        id: '1',
-        fullName: formData.fullName || 'Demo User',
-        email: 'demo@example.com',
-        phone: '+234 800 000 0000',
-        location: formData.location || 'Lagos, Nigeria',
-        dateOfBirth: formData.dateOfBirth || '1990-01-01',
-        role: currentRole,
-        verificationStatus: 'pending',
+
+    try {
+      // Update profile
+      const { error: profileError } = await updateProfile({
+        full_name: formData.fullName,
+        location: formData.location,
+        date_of_birth: formData.dateOfBirth || null,
+        national_id_number: formData.nationalIdNumber || null,
+        verification_status: 'pending',
+        active_role: selectedRole,
       });
-      setIsLoading(false);
+
+      if (profileError) throw profileError;
+
+      // Create provider profile if selected
+      if (selectedRole === 'provider') {
+        const { error: providerError } = await createProviderProfile({
+          service_categories: formData.serviceCategories,
+          service_description: formData.serviceDescription,
+          service_mode: formData.serviceMode,
+          delivery_time: formData.deliveryTime,
+        });
+
+        if (providerError) throw providerError;
+      }
+
+      toast({
+        title: 'Profile updated!',
+        description: 'Your verification is under review.',
+      });
+
       navigate('/dashboard');
-    }, 1500);
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to complete onboarding',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -77,6 +131,14 @@ const Onboarding = () => {
         : [...prev.serviceCategories, category],
     }));
   };
+
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const renderStep = () => {
     switch (step) {
@@ -112,6 +174,32 @@ const Onboarding = () => {
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">What would you like to do?</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <Card
+                    variant={selectedRole === 'requester' ? 'outlined' : 'default'}
+                    className={`p-4 cursor-pointer transition-all ${
+                      selectedRole === 'requester' ? 'border-2 border-primary' : ''
+                    }`}
+                    onClick={() => setSelectedRole('requester')}
+                  >
+                    <h3 className="font-semibold text-foreground">I Need Help</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Post jobs and hire providers</p>
+                  </Card>
+                  <Card
+                    variant={selectedRole === 'provider' ? 'outlined' : 'default'}
+                    className={`p-4 cursor-pointer transition-all ${
+                      selectedRole === 'provider' ? 'border-2 border-primary' : ''
+                    }`}
+                    onClick={() => setSelectedRole('provider')}
+                  >
+                    <h3 className="font-semibold text-foreground">I Offer Services</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Find clients and earn</p>
+                  </Card>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -220,15 +308,15 @@ const Onboarding = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Service Categories</label>
                 <div className="flex flex-wrap gap-2">
-                  {SERVICE_CATEGORIES.map((category) => (
+                  {categories.map((category) => (
                     <Button
-                      key={category}
+                      key={category.id}
                       type="button"
-                      variant={formData.serviceCategories.includes(category) ? 'soft' : 'outline'}
+                      variant={formData.serviceCategories.includes(category.name) ? 'soft' : 'outline'}
                       size="sm"
-                      onClick={() => toggleCategory(category)}
+                      onClick={() => toggleCategory(category.name)}
                     >
-                      {category}
+                      {category.name}
                     </Button>
                   ))}
                 </div>
