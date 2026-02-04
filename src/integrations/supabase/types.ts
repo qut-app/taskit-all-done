@@ -147,8 +147,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string | null
           active_role: string | null
           avatar_url: string | null
+          cac_document_url: string | null
+          cac_number: string | null
+          company_address: string | null
+          company_name: string | null
           created_at: string
           date_of_birth: string | null
           email: string | null
@@ -165,8 +170,13 @@ export type Database = {
           verification_status: Database["public"]["Enums"]["verification_status"]
         }
         Insert: {
+          account_type?: string | null
           active_role?: string | null
           avatar_url?: string | null
+          cac_document_url?: string | null
+          cac_number?: string | null
+          company_address?: string | null
+          company_name?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
@@ -183,8 +193,13 @@ export type Database = {
           verification_status?: Database["public"]["Enums"]["verification_status"]
         }
         Update: {
+          account_type?: string | null
           active_role?: string | null
           avatar_url?: string | null
+          cac_document_url?: string | null
+          cac_number?: string | null
+          company_address?: string | null
+          company_name?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
