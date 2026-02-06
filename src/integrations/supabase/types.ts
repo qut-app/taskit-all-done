@@ -145,6 +145,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: string | null
@@ -165,6 +198,11 @@ export type Database = {
           longitude: number | null
           national_id_number: string | null
           phone: string | null
+          requester_active_slots: number | null
+          requester_completed_jobs: number | null
+          requester_max_slots: number | null
+          requester_rating: number | null
+          requester_review_count: number | null
           updated_at: string
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -188,6 +226,11 @@ export type Database = {
           longitude?: number | null
           national_id_number?: string | null
           phone?: string | null
+          requester_active_slots?: number | null
+          requester_completed_jobs?: number | null
+          requester_max_slots?: number | null
+          requester_rating?: number | null
+          requester_review_count?: number | null
           updated_at?: string
           user_id: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -211,6 +254,11 @@ export type Database = {
           longitude?: number | null
           national_id_number?: string | null
           phone?: string | null
+          requester_active_slots?: number | null
+          requester_completed_jobs?: number | null
+          requester_max_slots?: number | null
+          requester_rating?: number | null
+          requester_review_count?: number | null
           updated_at?: string
           user_id?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -344,6 +392,35 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      showcase_likes: {
+        Row: {
+          created_at: string
+          id: string
+          showcase_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          showcase_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          showcase_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_likes_showcase_id_fkey"
+            columns: ["showcase_id"]
+            isOneToOne: false
+            referencedRelation: "work_showcases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
