@@ -253,9 +253,27 @@ const Dashboard = () => {
         </Card>
       </motion.div>
 
+      {/* Slot Usage */}
+      <motion.div variants={cardVariants} custom={1}>
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-foreground">Job Slots</h3>
+            <Badge variant="outline">{providerProfile?.active_job_slots || 0} / {providerProfile?.max_job_slots || 3} used</Badge>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all" style={{
+              width: `${((providerProfile?.active_job_slots || 0) / (providerProfile?.max_job_slots || 3)) * 100}%`
+            }} />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {(providerProfile?.max_job_slots || 3) - (providerProfile?.active_job_slots || 0)} slots remaining
+          </p>
+        </Card>
+      </motion.div>
+
       {/* Upgrade Banner */}
       {!providerProfile?.is_premium && (
-        <motion.div variants={cardVariants} custom={1}>
+        <motion.div variants={cardVariants} custom={2}>
           <Card className="p-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
@@ -263,7 +281,7 @@ const Dashboard = () => {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold">Boost Your Slots</h3>
-                <p className="text-sm opacity-80">Get more job capacity</p>
+                <p className="text-sm opacity-80">Get more job capacity with premium</p>
               </div>
               <Button variant="secondary" size="sm" className="shrink-0">
                 ₦4,000/mo
