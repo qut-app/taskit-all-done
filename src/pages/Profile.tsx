@@ -1,25 +1,43 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Settings, Bell, Shield, CreditCard, HelpCircle, LogOut,
-  Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2
+  Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
+  Edit3, Camera, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useApp } from '@/context/AppContext';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { useToast } from '@/hooks/use-toast';
+import { WorkShowcaseGallery } from '@/components/profile/WorkShowcaseGallery';
+import { supabase } from '@/integrations/supabase/client';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { profile, providerProfile, loading } = useProfile();
+  const { profile, providerProfile, loading, updateProfile, updateProviderProfile, refetch } = useProfile();
   const { currentRole, switchRole } = useApp();
   const { toast } = useToast();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    phone: '',
+    location: '',
+    company_name: '',
+    company_address: '',
+    service_description: '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -30,6 +48,69 @@ const Profile = () => {
     const newRole = currentRole === 'requester' ? 'provider' : 'requester';
     await switchRole(newRole);
     toast({ title: 'Role switched', description: `You are now a ${newRole === 'requester' ? 'Job Giver' : 'Service Provider'}` });
+  };
+
+  const startEditing = () => {
+    setEditForm({
+      full_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+      location: profile?.location || '',
+      company_name: profile?.company_name || '',
+      company_address: profile?.company_address || '',
+      service_description: providerProfile?.service_description || '',
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const profileUpdates: any = {
+      full_name: editForm.full_name,
+      phone: editForm.phone,
+      location: editForm.location,
+    };
+    if (profile?.account_type === 'company') {
+      profileUpdates.company_name = editForm.company_name;
+      profileUpdates.company_address = editForm.company_address;
+    }
+
+    const { error } = await updateProfile(profileUpdates);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      if (isProvider && providerProfile && editForm.service_description !== providerProfile.service_description) {
+        await updateProviderProfile({ service_description: editForm.service_description });
+      }
+      toast({ title: 'Profile updated!' });
+      setIsEditing(false);
+    }
+    setSaving(false);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingAvatar(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `avatars/${user.id}/avatar.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('user-media')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast({ title: 'Upload failed', description: uploadError.message, variant: 'destructive' });
+    } else {
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-media')
+        .getPublicUrl(filePath);
+
+      await updateProfile({ avatar_url: publicUrl });
+      await refetch();
+      toast({ title: 'Avatar updated!' });
+    }
+    setUploadingAvatar(false);
   };
 
   if (loading || !profile) {
@@ -56,8 +137,21 @@ const Profile = () => {
 
   return (
     <MobileLayout>
-      <header className="p-4 safe-top">
+      <header className="p-4 safe-top flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Profile</h1>
+        {!isEditing ? (
+          <Button variant="ghost" size="sm" onClick={startEditing} className="gap-1">
+            <Edit3 className="w-4 h-4" />
+            Edit
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+            </Button>
+          </div>
+        )}
       </header>
 
       <div className="px-4 pb-4 space-y-6">
@@ -65,27 +159,63 @@ const Profile = () => {
         <Card className="p-5">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className={`w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl ${
-                isCompany ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
-              }`}>
-                {isCompany ? <Building2 className="w-8 h-8" /> : displayName?.charAt(0) || 'U'}
-              </div>
+              {profile.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="Avatar" 
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl ${
+                  isCompany ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+                }`}>
+                  {isCompany ? <Building2 className="w-8 h-8" /> : displayName?.charAt(0) || 'U'}
+                </div>
+              )}
               {profile.verification_status === 'verified' && (
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center">
                   <CheckCircle className="w-4 h-4 text-success-foreground" />
                 </div>
               )}
+              {/* Avatar upload button */}
+              <label className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg">
+                {uploadingAvatar ? (
+                  <Loader2 className="w-3.5 h-3.5 text-primary-foreground animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5 text-primary-foreground" />
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              </label>
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h2 className="font-bold text-xl text-foreground">{displayName || 'User'}</h2>
-                <VerificationBadge 
-                  status={profile.verification_status as any} 
-                  accountType={isCompany ? 'company' : 'individual'}
-                  size="sm"
-                />
-              </div>
-              <p className="text-sm text-muted-foreground">{profile.email}</p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <Input
+                    value={editForm.full_name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, full_name: e.target.value }))}
+                    placeholder="Full Name"
+                  />
+                  {isCompany && (
+                    <Input
+                      value={editForm.company_name}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, company_name: e.target.value }))}
+                      placeholder="Company Name"
+                    />
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-bold text-xl text-foreground">{displayName || 'User'}</h2>
+                    <VerificationBadge 
+                      status={profile.verification_status as any} 
+                      accountType={isCompany ? 'company' : 'individual'}
+                      size="sm"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                </>
+              )}
               <div className="flex items-center gap-2 mt-2">
                 <Badge variant={currentRole === 'requester' ? 'default' : 'secondary'}>
                   {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}
@@ -99,6 +229,64 @@ const Profile = () => {
               </div>
             </div>
           </div>
+
+          {/* Editable fields */}
+          {isEditing && (
+            <div className="mt-4 space-y-3 pt-4 border-t border-border">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Phone</label>
+                <Input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Phone number"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Location</label>
+                <Input
+                  value={editForm.location}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Your location"
+                />
+              </div>
+              {isCompany && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Company Address</label>
+                  <Input
+                    value={editForm.company_address}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, company_address: e.target.value }))}
+                    placeholder="Company address"
+                  />
+                </div>
+              )}
+              {isProvider && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Service Description</label>
+                  <Textarea
+                    value={editForm.service_description}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, service_description: e.target.value }))}
+                    placeholder="Describe your services..."
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Display info when not editing */}
+          {!isEditing && (
+            <div className="mt-4 pt-4 border-t border-border space-y-2">
+              {profile.phone && (
+                <p className="text-sm text-muted-foreground">📞 {profile.phone}</p>
+              )}
+              {profile.location && (
+                <p className="text-sm text-muted-foreground">📍 {profile.location}</p>
+              )}
+              {isProvider && providerProfile?.service_description && (
+                <p className="text-sm text-muted-foreground">{providerProfile.service_description}</p>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* Role Switch */}
@@ -138,6 +326,39 @@ const Profile = () => {
               <div className="text-xs text-muted-foreground mt-1">On-Time</div>
             </Card>
           </div>
+        )}
+
+        {/* Requester Stats */}
+        {!isProvider && (
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
+              <div className="text-2xl font-bold text-primary">
+                {(profile as any).requester_active_slots || 0}/{(profile as any).requester_max_slots || 3}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">Active Jobs</div>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-foreground">
+                {(profile as any).requester_completed_jobs || 0}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">Completed</div>
+            </Card>
+            <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-2xl font-bold text-success">{(profile as any).requester_rating || 0}</span>
+                <Star className="w-4 h-4 text-warning fill-warning" />
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">Rating</div>
+            </Card>
+          </div>
+        )}
+
+        {/* Work Showcase (Provider only) */}
+        {isProvider && providerProfile && (
+          <WorkShowcaseGallery
+            providerProfileId={providerProfile.id}
+            isOwner={true}
+          />
         )}
 
         {/* Menu */}

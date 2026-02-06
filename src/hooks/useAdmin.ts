@@ -121,7 +121,23 @@ export function useAdminData() {
       .update({ verification_status: 'verified' })
       .eq('user_id', userId);
     
-    if (!error) await fetchData();
+    if (!error) {
+      // Get user profile to determine role
+      const userProfile = pendingVerifications.find(u => u.user_id === userId);
+      const isProvider = userProfile?.active_role === 'provider';
+
+      // Create in-app notification
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title: '🎉 Account Verified!',
+        message: isProvider
+          ? 'Your account has been verified! Tip: Complete your work showcase, maintain high ratings, and deliver on time to rank higher on QUT.'
+          : 'Your account has been verified! You can now post jobs and hire top-rated Service Providers on QUT.',
+        type: 'verification',
+      });
+
+      await fetchData();
+    }
     return { error };
   };
 
