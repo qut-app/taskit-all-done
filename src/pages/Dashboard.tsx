@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -25,6 +25,7 @@ import { useProviders } from '@/hooks/useProviders';
 import { useAdmin } from '@/hooks/useAdmin';
 import JobCard from '@/components/cards/JobCard';
 import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
+import { NotificationsSheet } from '@/components/notifications/NotificationsSheet';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -63,6 +64,10 @@ const Dashboard = () => {
   const assignedJobs = myJobs.filter(j => j.status === 'assigned' || j.status === 'in_progress');
   const recommendedProviders = providers.filter(p => p.is_recommended).slice(0, 5);
 
+  // Requester slots
+  const requesterActiveSlots = (profile as any).requester_active_slots || 0;
+  const requesterMaxSlots = (profile as any).requester_max_slots || 3;
+
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({
@@ -81,8 +86,75 @@ const Dashboard = () => {
         visible: { transition: { staggerChildren: 0.1 } }
       }}
     >
+      {/* Requester Stats */}
+      <motion.div 
+        className="grid grid-cols-3 gap-3"
+        variants={cardVariants}
+        custom={0}
+      >
+        <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
+          <div className="text-2xl font-bold text-primary">
+            {requesterActiveSlots}/{requesterMaxSlots}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Active Jobs</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-2xl font-bold text-foreground">
+            {(profile as any).requester_completed_jobs || 0}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Completed</div>
+        </Card>
+        <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-2xl font-bold text-success">
+              {(profile as any).requester_rating || 0}
+            </span>
+            <Star className="w-4 h-4 text-warning fill-warning" />
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Rating</div>
+        </Card>
+      </motion.div>
+
+      {/* Requester Slot Usage */}
+      <motion.div variants={cardVariants} custom={1}>
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-foreground">Job Slots</h3>
+            <Badge variant="outline">{requesterActiveSlots} / {requesterMaxSlots} used</Badge>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all" style={{
+              width: `${(requesterActiveSlots / requesterMaxSlots) * 100}%`
+            }} />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {requesterMaxSlots - requesterActiveSlots} slots remaining · 3 free slots/month
+          </p>
+        </Card>
+      </motion.div>
+
+      {/* Requester Upgrade Banner */}
+      {requesterMaxSlots <= 3 && (
+        <motion.div variants={cardVariants} custom={2}>
+          <Card className="p-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Unlimited Hiring</h3>
+                <p className="text-sm opacity-80">Post unlimited jobs with premium</p>
+              </div>
+              <Button variant="secondary" size="sm" className="shrink-0">
+                ₦7,500/mo
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Quick Actions */}
-      <motion.section variants={cardVariants} custom={0}>
+      <motion.section variants={cardVariants} custom={3}>
         <h2 className="text-lg font-semibold text-foreground mb-3">Quick Actions</h2>
         <div className="grid grid-cols-2 gap-3">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -118,7 +190,7 @@ const Dashboard = () => {
         {assignedJobs.length > 0 && (
           <motion.section 
             variants={cardVariants} 
-            custom={1}
+            custom={4}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -148,7 +220,7 @@ const Dashboard = () => {
 
       {/* Recommended Providers */}
       {recommendedProviders.length > 0 && (
-        <motion.section variants={cardVariants} custom={2}>
+        <motion.section variants={cardVariants} custom={5}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-foreground">Top Providers</h2>
             <Button variant="ghost" size="sm" onClick={() => navigate('/discover')}>
@@ -266,7 +338,7 @@ const Dashboard = () => {
             }} />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            {(providerProfile?.max_job_slots || 3) - (providerProfile?.active_job_slots || 0)} slots remaining
+            {(providerProfile?.max_job_slots || 3) - (providerProfile?.active_job_slots || 0)} slots remaining · 3 free slots/month
           </p>
         </Card>
       </motion.div>
@@ -292,7 +364,7 @@ const Dashboard = () => {
       )}
 
       {/* Available Jobs */}
-      <motion.section variants={cardVariants} custom={2}>
+      <motion.section variants={cardVariants} custom={3}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold text-foreground">Jobs For You</h2>
           <Button variant="ghost" size="sm" onClick={() => navigate('/find-jobs')}>
@@ -379,10 +451,7 @@ const Dashboard = () => {
               </motion.div>
             )}
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
-              </Button>
+              <NotificationsSheet />
             </motion.div>
           </div>
         </div>

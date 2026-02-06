@@ -149,7 +149,20 @@ export function useJobs() {
         message,
       });
 
-    if (!error) await fetchJobs();
+    if (!error) {
+      // Find the job to get the requester_id for notification
+      const job = jobs.find(j => j.id === jobId);
+      if (job) {
+        await supabase.from('notifications').insert({
+          user_id: job.requester_id,
+          title: '📋 New Job Application',
+          message: `A Service Provider has applied to your job "${job.title}".`,
+          type: 'job_application',
+          metadata: { job_id: jobId, provider_id: user.id },
+        });
+      }
+      await fetchJobs();
+    }
     return { error };
   };
 
@@ -163,6 +176,46 @@ export function useJobs() {
     return { error };
   };
 
+  const acceptProvider = async (jobId: string, applicationId: string, providerId: string) => {
+    // Accept this application
+    const { error: acceptError } = await supabase
+      .from('job_applications')
+      .update({ status: 'accepted' })
+      .eq('id', applicationId);
+
+    if (acceptError) return { error: acceptError };
+
+    // Reject all other applications for this job
+    await supabase
+      .from('job_applications')
+      .update({ status: 'rejected' })
+      .eq('job_id', jobId)
+      .neq('id', applicationId);
+
+    // Update job status to in_progress
+    const { error: jobError } = await supabase
+      .from('jobs')
+      .update({ 
+        status: 'in_progress',
+        assigned_provider_count: 1,
+      })
+      .eq('id', jobId);
+
+    if (!jobError) {
+      // Notify the accepted provider
+      await supabase.from('notifications').insert({
+        user_id: providerId,
+        title: '🎉 Application Accepted!',
+        message: 'Your job application has been accepted. The job is now active!',
+        type: 'job_accepted',
+        metadata: { job_id: jobId },
+      });
+
+      await fetchJobs();
+    }
+    return { error: jobError };
+  };
+
   return {
     jobs,
     myJobs,
@@ -174,5 +227,6 @@ export function useJobs() {
     deleteJob,
     applyToJob,
     updateApplication,
+    acceptProvider,
   };
 }
