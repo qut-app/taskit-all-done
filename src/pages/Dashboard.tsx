@@ -23,7 +23,11 @@ import { useProfile } from '@/hooks/useProfile';
 import { useJobs } from '@/hooks/useJobs';
 import { useProviders } from '@/hooks/useProviders';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useRecommendedProviders } from '@/hooks/useRecommendedProviders';
+import { useShowcaseFeed } from '@/hooks/useShowcaseFeed';
 import JobCard from '@/components/cards/JobCard';
+import RecommendedExperts from '@/components/dashboard/RecommendedExperts';
+import ShowcaseFeed from '@/components/dashboard/ShowcaseFeed';
 import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
 import { NotificationsSheet } from '@/components/notifications/NotificationsSheet';
 
@@ -34,6 +38,8 @@ const Dashboard = () => {
   const { jobs, myJobs, loading: jobsLoading } = useJobs();
   const { providers, loading: providersLoading } = useProviders();
   const { isAdmin } = useAdmin();
+  const { providers: recommendedExperts, loading: recommendedLoading } = useRecommendedProviders();
+  const { items: feedItems, loading: feedLoading, toggleLike } = useShowcaseFeed();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -218,72 +224,24 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* Recommended Providers */}
-      {recommendedProviders.length > 0 && (
-        <motion.section variants={cardVariants} custom={5}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-foreground">Top Providers</h2>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/discover')}>
-              See All
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {recommendedProviders.map((provider, i) => {
-              const providerProfile = provider.profile as any;
-              const providerIsCompany = providerProfile?.account_type === 'company';
-              return (
-                <motion.div
-                  key={provider.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ y: -3 }}
-                >
-                  <Card className="flex-shrink-0 w-48 p-4 hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold ${
-                        providerIsCompany 
-                          ? 'bg-secondary/10 text-secondary' 
-                          : 'bg-primary/10 text-primary'
-                      }`}>
-                        {providerIsCompany ? (
-                          <Building2 className="w-5 h-5" />
-                        ) : (
-                          providerProfile?.full_name?.charAt(0) || 'P'
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <h3 className="font-semibold text-foreground text-sm truncate">
-                            {providerIsCompany 
-                              ? providerProfile?.company_name 
-                              : providerProfile?.full_name || 'Provider'}
-                          </h3>
-                          {providerProfile?.verification_status === 'verified' && (
-                            <VerificationBadge 
-                              status="verified" 
-                              accountType={providerIsCompany ? 'company' : 'individual'}
-                              size="sm"
-                            />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Star className="w-3 h-3 text-warning fill-warning" />
-                          <span>{provider.rating || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {provider.service_categories?.[0] || 'Services'}
-                    </Badge>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        </motion.section>
-      )}
+      {/* Recommended Experts */}
+      <motion.section variants={cardVariants} custom={5}>
+        <RecommendedExperts
+          providers={recommendedExperts}
+          loading={recommendedLoading}
+          onSeeAll={() => navigate('/discover')}
+        />
+      </motion.section>
+
+      {/* Showcase Feed */}
+      <motion.section variants={cardVariants} custom={6}>
+        <ShowcaseFeed
+          items={feedItems}
+          loading={feedLoading}
+          onToggleLike={toggleLike}
+          onViewProvider={(userId) => navigate(`/discover`)}
+        />
+      </motion.section>
     </motion.div>
   );
 

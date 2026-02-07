@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import JobCard from '@/components/cards/JobCard';
+import EditJobDialog from '@/components/jobs/EditJobDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useJobs } from '@/hooks/useJobs';
@@ -20,6 +21,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Tables } from '@/integrations/supabase/types';
 
 const MyJobs = () => {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ const MyJobs = () => {
   const [ratingUserId, setRatingUserId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+  const [editingJob, setEditingJob] = useState<Tables<'jobs'> | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -157,7 +160,12 @@ const MyJobs = () => {
               activeJobs.map((job) => (
                 job && (
                   <div key={job.id}>
-                    <JobCard job={job as any} showActions={false} />
+                    <JobCard
+                      job={job as any}
+                      showActions={false}
+                      isOwner={!isProvider}
+                      onEdit={() => setEditingJob(job as any)}
+                    />
                     {/* Show "View Applications" for requesters on open jobs */}
                     {!isProvider && job.status === 'open' && (
                       <Button 
@@ -364,6 +372,17 @@ const MyJobs = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Job Dialog */}
+      <EditJobDialog
+        job={editingJob}
+        open={!!editingJob}
+        onOpenChange={(open) => { if (!open) setEditingJob(null); }}
+        onSaved={() => {
+          setEditingJob(null);
+          // refetch is handled by useJobs internally
+        }}
+      />
     </MobileLayout>
   );
 };
