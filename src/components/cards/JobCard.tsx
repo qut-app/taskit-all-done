@@ -1,4 +1,4 @@
-import { MapPin, Clock, DollarSign, User } from 'lucide-react';
+import { MapPin, Clock, DollarSign, User, Pencil } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,13 @@ interface JobCardProps {
   job: JobWithRequester;
   variant?: 'default' | 'compact';
   showActions?: boolean;
+  isOwner?: boolean;
   onView?: () => void;
   onApply?: () => void;
+  onEdit?: () => void;
 }
 
-const JobCard = ({ job, variant = 'default', showActions = true, onView, onApply }: JobCardProps) => {
+const JobCard = ({ job, variant = 'default', showActions = true, isOwner = false, onView, onApply, onEdit }: JobCardProps) => {
   const statusColors = {
     open: 'success',
     assigned: 'warning',
@@ -63,7 +65,14 @@ const JobCard = ({ job, variant = 'default', showActions = true, onView, onApply
     <Card variant="elevated" className="p-4">
       <div className="flex justify-between items-start gap-2 mb-3">
         <Badge variant="soft">{job.category}</Badge>
-        <Badge variant={statusColors[job.status || 'open']}>{(job.status || 'open').replace('_', ' ')}</Badge>
+        <div className="flex items-center gap-1.5">
+          {isOwner && (job.status === 'open' || job.status === 'assigned' || job.status === 'in_progress') && (
+            <Button variant="ghost" size="iconSm" onClick={onEdit} className="text-muted-foreground hover:text-primary">
+              <Pencil className="w-4 h-4" />
+            </Button>
+          )}
+          <Badge variant={statusColors[job.status || 'open']}>{(job.status || 'open').replace('_', ' ')}</Badge>
+        </div>
       </div>
 
       <h3 className="font-semibold text-lg text-foreground">{job.title}</h3>
