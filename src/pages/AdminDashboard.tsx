@@ -30,6 +30,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdmin, useAdminData } from '@/hooks/useAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useAdminFeedback } from '@/hooks/useFeedback';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -72,6 +75,8 @@ const AdminDashboard = () => {
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [showAdDialog, setShowAdDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const { feedbacks, loading: feedbackLoading, updateFeedback } = useAdminFeedback();
+  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
 
   // Loading state
   if (authLoading || adminLoading) {
@@ -323,7 +328,7 @@ const AdminDashboard = () => {
       {/* Tabs */}
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-6 mb-4 h-auto">
             <TabsTrigger value="verifications" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CheckCircle className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Verify</span>
@@ -339,6 +344,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="ads" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Megaphone className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Ads</span>
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <FileText className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Feedback</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="w-4 h-4 sm:mr-1" />
@@ -763,6 +772,153 @@ const AdminDashboard = () => {
                             {userItem.verification_status === 'verified' && <BadgeCheck className="w-3 h-3 mr-1" />}
                             {userItem.verification_status}
                           </Badge>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          {/* Feedback Tab */}
+          <TabsContent value="feedback">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">User Feedback</CardTitle>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const csv = [
+                      ['Date', 'Category', 'Role', 'Status', 'Priority', 'Message'].join(','),
+                      ...feedbacks.map((f: any) =>
+                        [
+                          new Date(f.created_at).toLocaleDateString(),
+                          f.category,
+                          f.role,
+                          f.status,
+                          f.priority || 'normal',
+                          `"${(f.message || '').replace(/"/g, '""')}"`,
+                        ].join(',')
+                      ),
+                    ].join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'feedback-export.csv';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Export CSV
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {feedbackLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : feedbacks.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground">No feedback yet.</p>
+                ) : (
+                  <AnimatePresence>
+                    {feedbacks.map((fb: any, idx: number) => (
+                      <motion.div
+                        key={fb.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="p-4 bg-muted/30 rounded-xl border border-border space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="text-xs">{fb.category}</Badge>
+                              <Badge variant="secondary" className="text-xs capitalize">{fb.role}</Badge>
+                              <Badge
+                                variant={fb.status === 'New' ? 'destructive' : fb.status === 'Resolved' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {fb.status}
+                              </Badge>
+                              {fb.priority === 'high' && <Badge className="text-xs bg-warning text-warning-foreground">High Priority</Badge>}
+                            </div>
+                            <p className="text-sm text-foreground mt-2">{fb.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(fb.created_at).toLocaleString()}
+                            </p>
+                            {fb.attachment_url && (
+                              <Button size="sm" variant="link" className="px-0 h-auto text-xs mt-1" onClick={() => window.open(fb.attachment_url, '_blank')}>
+                                View Attachment
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Select
+                            defaultValue={fb.status}
+                            onValueChange={async (val) => {
+                              const { error } = await updateFeedback(fb.id, { status: val });
+                              if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                              else toast({ title: 'Status updated' });
+                            }}
+                          >
+                            <SelectTrigger className="w-[130px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="New">New</SelectItem>
+                              <SelectItem value="Reviewing">Reviewing</SelectItem>
+                              <SelectItem value="Resolved">Resolved</SelectItem>
+                              <SelectItem value="Closed">Closed</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select
+                            defaultValue={fb.priority || 'normal'}
+                            onValueChange={async (val) => {
+                              const { error } = await updateFeedback(fb.id, { priority: val });
+                              if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                              else toast({ title: 'Priority updated' });
+                            }}
+                          >
+                            <SelectTrigger className="w-[110px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="normal">Normal</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Textarea
+                            placeholder="Admin notes..."
+                            rows={2}
+                            className="text-xs"
+                            value={editingNotes[fb.id] ?? fb.admin_notes ?? ''}
+                            onChange={(e) => setEditingNotes(prev => ({ ...prev, [fb.id]: e.target.value }))}
+                          />
+                          {(editingNotes[fb.id] !== undefined && editingNotes[fb.id] !== (fb.admin_notes ?? '')) && (
+                            <Button
+                              size="sm"
+                              className="mt-1 text-xs h-7"
+                              onClick={async () => {
+                                const { error } = await updateFeedback(fb.id, { admin_notes: editingNotes[fb.id] });
+                                if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                else {
+                                  toast({ title: 'Notes saved' });
+                                  setEditingNotes(prev => { const n = { ...prev }; delete n[fb.id]; return n; });
+                                }
+                              }}
+                            >
+                              Save Notes
+                            </Button>
+                          )}
                         </div>
                       </motion.div>
                     ))}

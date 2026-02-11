@@ -192,6 +192,48 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          admin_notes: string | null
+          attachment_url: string | null
+          category: string
+          created_at: string
+          id: string
+          message: string
+          priority: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          attachment_url?: string | null
+          category: string
+          created_at?: string
+          id?: string
+          message: string
+          priority?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          attachment_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          priority?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       hire_requests: {
         Row: {
           created_at: string
