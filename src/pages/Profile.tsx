@@ -39,7 +39,7 @@ const Profile = () => {
   const { toast } = useToast();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { favourites, loading: favLoading, removeFavourite } = useFavourites();
-  const { referrals, referralCode, completedCount, pendingCount } = useReferrals();
+  const { referralLink, referredProviders, referredRequesters, totalRewardsEarned } = useReferrals();
   const { initializePayment, loading: paymentLoading } = usePaystackPayment();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -139,9 +139,9 @@ const Profile = () => {
     });
   };
 
-  const copyReferralCode = () => {
-    navigator.clipboard.writeText(referralCode);
-    toast({ title: 'Copied!', description: 'Referral code copied to clipboard' });
+  const copyReferralLink = () => {
+    navigator.clipboard.writeText(referralLink);
+    toast({ title: 'Copied!', description: 'Referral link copied to clipboard' });
   };
 
   if (loading || !profile) {
@@ -165,7 +165,7 @@ const Profile = () => {
     { q: 'How does payment work?', a: 'Payments are processed through Paystack. Funds are held in escrow until the job is completed and approved.' },
     { q: 'How do I switch roles?', a: 'Individual accounts can switch between Job Giver and Service Provider roles with a 24-hour cooldown period.' },
     { q: 'What are job slots?', a: 'Job slots limit how many active jobs you can have simultaneously. Upgrade your plan to get more slots.' },
-    { q: 'How do referrals work?', a: 'Share your referral code with friends. When they sign up and complete their first transaction, both of you earn rewards.' },
+    { q: 'How do referrals work?', a: 'Share your unique referral link. When someone signs up, verifies their account, and selects a role, the referral counts. Refer 4 Service Providers for +1 Job Slot, or 3 Job Givers for +1 Hiring Slot.' },
   ];
 
   return (
@@ -486,36 +486,66 @@ const Profile = () => {
 
           {/* ===== REFERRALS TAB ===== */}
           <TabsContent value="referrals" className="space-y-4">
+            {/* Referral Link */}
             <Card className="p-5">
-              <h3 className="font-semibold text-foreground mb-3">Your Referral Code</h3>
+              <h3 className="font-semibold text-foreground mb-2">🔗 Your Referral Link</h3>
+              <p className="text-xs text-muted-foreground mb-3">Share this link to invite people and earn slot rewards.</p>
               <div className="flex items-center gap-2">
-                <div className="flex-1 bg-muted/50 rounded-lg p-3 text-center font-mono text-lg font-bold text-foreground tracking-wider">
-                  {referralCode}
+                <div className="flex-1 bg-muted/50 rounded-lg p-3 text-xs font-mono text-foreground truncate">
+                  {referralLink}
                 </div>
-                <Button variant="outline" size="icon" onClick={copyReferralCode}>
+                <Button variant="outline" size="icon" onClick={copyReferralLink}>
                   <Copy className="w-4 h-4" />
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => {
                   if (navigator.share) {
-                    navigator.share({ title: 'Join TaskIt', text: `Use my referral code: ${referralCode}` });
+                    navigator.share({ title: 'Join TaskIt', text: `Sign up using my link: ${referralLink}`, url: referralLink });
                   } else {
-                    copyReferralCode();
+                    copyReferralLink();
                   }
                 }}>
                   <Share2 className="w-4 h-4" />
                 </Button>
               </div>
             </Card>
+
+            {/* Progress */}
+            <h3 className="font-semibold text-foreground">📊 Referral Progress</h3>
             <div className="grid grid-cols-2 gap-3">
-              <Card className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{completedCount}</div>
-                <div className="text-xs text-muted-foreground">Completed</div>
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Service Providers Referred</p>
+                <div className="text-2xl font-bold text-primary">{referredProviders % 4} / 4</div>
+                <p className="text-[10px] text-muted-foreground mt-1">+1 Job Slot at 4</p>
               </Card>
-              <Card className="p-4 text-center">
-                <div className="text-2xl font-bold text-warning">{pendingCount}</div>
-                <div className="text-xs text-muted-foreground">Pending</div>
+              <Card className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Job Givers Referred</p>
+                <div className="text-2xl font-bold text-secondary">{referredRequesters % 3} / 3</div>
+                <p className="text-[10px] text-muted-foreground mt-1">+1 Hiring Slot at 3</p>
               </Card>
             </div>
+
+            {/* Rewards */}
+            <Card className="p-4 bg-gradient-to-br from-primary/5 to-transparent">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-foreground text-sm">🎁 Rewards Earned</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">{totalRewardsEarned} extra slot{totalRewardsEarned !== 1 ? 's' : ''} unlocked</p>
+                </div>
+                <div className="text-3xl font-bold text-primary">{totalRewardsEarned}</div>
+              </div>
+            </Card>
+
+            {/* Totals */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Total Providers Referred</span>
+                <span className="font-semibold text-foreground">{referredProviders}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-2">
+                <span className="text-muted-foreground">Total Job Givers Referred</span>
+                <span className="font-semibold text-foreground">{referredRequesters}</span>
+              </div>
+            </Card>
           </TabsContent>
 
           {/* ===== PAYMENTS TAB ===== */}

@@ -229,6 +229,19 @@ const Onboarding = () => {
         if (providerError) throw providerError;
       }
 
+      // Create referral record if user was referred
+      const referrerId = localStorage.getItem('referrer_id');
+      if (referrerId && user && referrerId !== user.id) {
+        await supabase.from('referrals').insert({
+          referrer_id: referrerId,
+          referred_user_id: user.id,
+          referral_code: referrerId, // Using user_id as the referral identifier
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        });
+        localStorage.removeItem('referrer_id');
+      }
+
       toast({ title: 'Profile submitted!', description: 'Your verification is under review.' });
       navigate('/dashboard');
     } catch (err: any) {

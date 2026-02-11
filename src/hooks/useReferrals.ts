@@ -2,63 +2,90 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export interface Referral {
-  id: string;
-  referrer_id: string;
-  referred_user_id: string | null;
-  referral_code: string;
-  status: string;
-  created_at: string;
-  completed_at: string | null;
+interface ReferralStats {
+  referredProviders: number;
+  referredRequesters: number;
+  totalRewardsEarned: number;
+  referralLink: string;
+  loading: boolean;
 }
 
-export function useReferrals() {
+export function useReferrals(): ReferralStats {
   const { user } = useAuth();
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [referralCode, setReferralCode] = useState<string>('');
+  const [referredProviders, setReferredProviders] = useState(0);
+  const [referredRequesters, setReferredRequesters] = useState(0);
+  const [totalRewardsEarned, setTotalRewardsEarned] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchReferrals = async () => {
+  const referralLink = user
+    ? `https://taskit-all-done.lovable.app/auth?ref=${user.id}`
+    : '';
+
+  useEffect(() => {
     if (!user) {
-      setReferrals([]);
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('referrals')
-        .select('*')
-        .eq('referrer_id', user.id)
-        .order('created_at', { ascending: false });
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
 
-      if (error) throw error;
-      setReferrals((data || []) as unknown as Referral[]);
-    } catch (err) {
-      console.error('Error fetching referrals:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        // Fetch all completed referrals where this user is the referrer
+        const { data: referrals } = await supabase
+          .from('referrals')
+          .select('*')
+          .eq('referrer_id', user.id)
+          .eq('status', 'completed');
 
-  useEffect(() => {
-    fetchReferrals();
-  }, [user]);
+        if (!referrals || referrals.length === 0) {
+          setReferredProviders(0);
+          setReferredRequesters(0);
+          setTotalRewardsEarned(0);
+          setLoading(false);
+          return;
+        }
 
-  useEffect(() => {
-    // Generate referral code from user id
-    if (user?.id) {
-      setReferralCode(user.id.substring(0, 8).toUpperCase());
-    }
+        // Get referred user profiles to determine their roles
+        const referredIds = referrals
+          .map(r => r.referred_user_id)
+          .filter(Boolean) as string[];
+
+        if (referredIds.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, active_role')
+          .in('user_id', referredIds);
+
+        const providerCount = (profiles || []).filter(p => p.active_role === 'provider').length;
+        const requesterCount = (profiles || []).filter(p => p.active_role === 'requester').length;
+
+        // Calculate rewards: 4 providers = +1 slot reward, 3 requesters = +1 slot reward
+        const providerRewards = Math.floor(providerCount / 4);
+        const requesterRewards = Math.floor(requesterCount / 3);
+
+        setReferredProviders(providerCount);
+        setReferredRequesters(requesterCount);
+        setTotalRewardsEarned(providerRewards + requesterRewards);
+      } catch (err) {
+        console.error('Error fetching referral stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
   }, [user]);
 
   return {
-    referrals,
-    referralCode,
+    referredProviders,
+    referredRequesters,
+    totalRewardsEarned,
+    referralLink,
     loading,
-    completedCount: referrals.filter(r => r.status === 'completed').length,
-    pendingCount: referrals.filter(r => r.status === 'pending').length,
-    refetch: fetchReferrals,
   };
 }
