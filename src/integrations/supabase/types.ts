@@ -17,38 +17,218 @@ export type Database = {
       ads: {
         Row: {
           ad_type: string | null
+          clicks: number | null
           created_at: string
           end_date: string | null
           id: string
           image_url: string | null
+          impressions: number | null
           is_active: boolean | null
           link_url: string | null
+          spend_amount: number | null
           start_date: string | null
           title: string
         }
         Insert: {
           ad_type?: string | null
+          clicks?: number | null
           created_at?: string
           end_date?: string | null
           id?: string
           image_url?: string | null
+          impressions?: number | null
           is_active?: boolean | null
           link_url?: string | null
+          spend_amount?: number | null
           start_date?: string | null
           title: string
         }
         Update: {
           ad_type?: string | null
+          clicks?: number | null
           created_at?: string
           end_date?: string | null
           id?: string
           image_url?: string | null
+          impressions?: number | null
           is_active?: boolean | null
           link_url?: string | null
+          spend_amount?: number | null
           start_date?: string | null
           title?: string
         }
         Relationships: []
+      }
+      custom_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      escrow_transactions: {
+        Row: {
+          amount: number
+          application_id: string
+          auto_release_at: string | null
+          commission_rate: number
+          created_at: string
+          delivered_at: string | null
+          id: string
+          job_id: string
+          payee_id: string
+          payer_id: string
+          paystack_access_code: string | null
+          paystack_reference: string | null
+          plan_type: string
+          platform_commission: number
+          pricing_plan_id: string | null
+          provider_earnings: number
+          released_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          application_id: string
+          auto_release_at?: string | null
+          commission_rate?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          job_id: string
+          payee_id: string
+          payer_id: string
+          paystack_access_code?: string | null
+          paystack_reference?: string | null
+          plan_type: string
+          platform_commission?: number
+          pricing_plan_id?: string | null
+          provider_earnings?: number
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          application_id?: string
+          auto_release_at?: string | null
+          commission_rate?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          job_id?: string
+          payee_id?: string
+          payer_id?: string
+          paystack_access_code?: string | null
+          paystack_reference?: string | null
+          plan_type?: string
+          platform_commission?: number
+          pricing_plan_id?: string | null
+          provider_earnings?: number
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_transactions_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_transactions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escrow_transactions_pricing_plan_id_fkey"
+            columns: ["pricing_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favourites: {
+        Row: {
+          created_at: string
+          favourite_user_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          favourite_user_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          favourite_user_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hire_requests: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          provider_id: string
+          requester_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          provider_id: string
+          requester_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          provider_id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hire_requests_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_applications: {
         Row: {
@@ -145,6 +325,133 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_read: boolean
+          job_id: string
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean
+          job_id: string
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean
+          job_id?: string
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiations: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          initiator_id: string
+          job_id: string
+          message: string | null
+          original_price: number
+          parent_negotiation_id: string | null
+          pricing_plan_id: string | null
+          proposed_price: number
+          responder_id: string
+          round: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          initiator_id: string
+          job_id: string
+          message?: string | null
+          original_price: number
+          parent_negotiation_id?: string | null
+          pricing_plan_id?: string | null
+          proposed_price: number
+          responder_id: string
+          round?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          initiator_id?: string
+          job_id?: string
+          message?: string | null
+          original_price?: number
+          parent_negotiation_id?: string | null
+          pricing_plan_id?: string | null
+          proposed_price?: number
+          responder_id?: string
+          round?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_parent_negotiation_id_fkey"
+            columns: ["parent_negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_pricing_plan_id_fkey"
+            columns: ["pricing_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -178,31 +485,84 @@ export type Database = {
         }
         Relationships: []
       }
+      pricing_plans: {
+        Row: {
+          application_id: string
+          created_at: string
+          delivery_time: string
+          description: string
+          id: string
+          plan_type: string
+          price: number
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          delivery_time: string
+          description: string
+          id?: string
+          plan_type: string
+          price: number
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          delivery_time?: string
+          description?: string
+          id?: string
+          plan_type?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_plans_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: string | null
           active_role: string | null
+          admin_warning: string | null
+          admin_warning_at: string | null
           avatar_url: string | null
           cac_document_url: string | null
           cac_number: string | null
           company_address: string | null
           company_name: string | null
+          company_plan: string | null
+          company_plan_started_at: string | null
+          company_trial_ends_at: string | null
+          company_website: string | null
           created_at: string
           date_of_birth: string | null
           email: string | null
           face_verification_url: string | null
           full_name: string
+          gender: string | null
           id: string
+          is_online: boolean | null
+          is_role_switch_restricted: boolean | null
+          is_suspended: boolean | null
+          last_role_switch_at: string | null
+          last_seen_at: string | null
           latitude: number | null
           location: string | null
           longitude: number | null
           national_id_number: string | null
+          onboarding_completed: boolean | null
           phone: string | null
+          referral_code: string | null
           requester_active_slots: number | null
           requester_completed_jobs: number | null
           requester_max_slots: number | null
           requester_rating: number | null
           requester_review_count: number | null
+          social_media_links: Json | null
           updated_at: string
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -210,27 +570,42 @@ export type Database = {
         Insert: {
           account_type?: string | null
           active_role?: string | null
+          admin_warning?: string | null
+          admin_warning_at?: string | null
           avatar_url?: string | null
           cac_document_url?: string | null
           cac_number?: string | null
           company_address?: string | null
           company_name?: string | null
+          company_plan?: string | null
+          company_plan_started_at?: string | null
+          company_trial_ends_at?: string | null
+          company_website?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
           face_verification_url?: string | null
           full_name: string
+          gender?: string | null
           id?: string
+          is_online?: boolean | null
+          is_role_switch_restricted?: boolean | null
+          is_suspended?: boolean | null
+          last_role_switch_at?: string | null
+          last_seen_at?: string | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
           national_id_number?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
+          referral_code?: string | null
           requester_active_slots?: number | null
           requester_completed_jobs?: number | null
           requester_max_slots?: number | null
           requester_rating?: number | null
           requester_review_count?: number | null
+          social_media_links?: Json | null
           updated_at?: string
           user_id: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -238,27 +613,42 @@ export type Database = {
         Update: {
           account_type?: string | null
           active_role?: string | null
+          admin_warning?: string | null
+          admin_warning_at?: string | null
           avatar_url?: string | null
           cac_document_url?: string | null
           cac_number?: string | null
           company_address?: string | null
           company_name?: string | null
+          company_plan?: string | null
+          company_plan_started_at?: string | null
+          company_trial_ends_at?: string | null
+          company_website?: string | null
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
           face_verification_url?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
+          is_online?: boolean | null
+          is_role_switch_restricted?: boolean | null
+          is_suspended?: boolean | null
+          last_role_switch_at?: string | null
+          last_seen_at?: string | null
           latitude?: number | null
           location?: string | null
           longitude?: number | null
           national_id_number?: string | null
+          onboarding_completed?: boolean | null
           phone?: string | null
+          referral_code?: string | null
           requester_active_slots?: number | null
           requester_completed_jobs?: number | null
           requester_max_slots?: number | null
           requester_rating?: number | null
           requester_review_count?: number | null
+          social_media_links?: Json | null
           updated_at?: string
           user_id?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -316,6 +706,72 @@ export type Database = {
           service_mode?: Database["public"]["Enums"]["service_mode"] | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_user_id: string | null
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_user_id?: string | null
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_user_id?: string | null
+          referrer_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          admin_action: string | null
+          admin_notes: string | null
+          created_at: string
+          id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_action?: string | null
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_action?: string | null
+          admin_notes?: string | null
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -455,6 +911,33 @@ export type Database = {
         }
         Relationships: []
       }
+      suspicious_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          flag_type: string
+          id: string
+          is_resolved: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          flag_type: string
+          id?: string
+          is_resolved?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          flag_type?: string
+          id?: string
+          is_resolved?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -530,6 +1013,28 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      deduct_slots_on_accept: {
+        Args: { _job_id: string; _provider_id: string; _requester_id: string }
+        Returns: undefined
+      }
+      get_public_profiles: {
+        Args: { user_ids: string[] }
+        Returns: {
+          account_type: string
+          active_role: string
+          avatar_url: string
+          company_name: string
+          full_name: string
+          is_online: boolean
+          last_seen_at: string
+          location: string
+          requester_completed_jobs: number
+          requester_rating: number
+          requester_review_count: number
+          user_id: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+        }[]
       }
       has_role: {
         Args: {
