@@ -1,31 +1,46 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-  Settings, Bell, Shield, CreditCard, HelpCircle, LogOut,
   Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
-  Edit3, Camera, Loader2
+  Edit3, Camera, Loader2, LogOut, Heart, Users, Megaphone, CreditCard,
+  HelpCircle, Bell, Shield, Copy, Share2, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import MobileLayout from '@/components/navigation/MobileLayout';
+import CompanyLayout from '@/components/navigation/CompanyLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useApp } from '@/context/AppContext';
-import { VerificationBadge } from '@/components/ui/VerificationBadge';
+import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
 import { useToast } from '@/hooks/use-toast';
 import { WorkShowcaseGallery } from '@/components/profile/WorkShowcaseGallery';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useFavourites } from '@/hooks/useFavourites';
+import { useReferrals } from '@/hooks/useReferrals';
+import { usePaystackPayment } from '@/hooks/usePaystackPayment';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDistanceToNow } from 'date-fns';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'profile';
   const { user, signOut } = useAuth();
   const { profile, providerProfile, loading, updateProfile, updateProviderProfile, refetch } = useProfile();
   const { currentRole, switchRole } = useApp();
   const { toast } = useToast();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { favourites, loading: favLoading, removeFavourite } = useFavourites();
+  const { referrals, referralCode, completedCount, pendingCount } = useReferrals();
+  const { initializePayment, loading: paymentLoading } = usePaystackPayment();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -113,6 +128,22 @@ const Profile = () => {
     setUploadingAvatar(false);
   };
 
+  const handleSubscribe = (subscriptionType: string, amount: number) => {
+    initializePayment({
+      amount,
+      subscriptionType,
+      onSuccess: (ref) => {
+        refetch();
+        toast({ title: 'Subscription activated!', description: `Reference: ${ref}` });
+      },
+    });
+  };
+
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(referralCode);
+    toast({ title: 'Copied!', description: 'Referral code copied to clipboard' });
+  };
+
   if (loading || !profile) {
     return (
       <MobileLayout>
@@ -127,16 +158,19 @@ const Profile = () => {
   const isProvider = currentRole === 'provider';
   const displayName = isCompany ? profile.company_name : profile.full_name;
 
-  const menuItems = [
-    { icon: Bell, label: 'Notifications', path: '/notifications', comingSoon: true },
-    { icon: Shield, label: 'Verification', path: '/verification', comingSoon: true },
-    { icon: CreditCard, label: 'Payments & Subscriptions', path: '/payments', comingSoon: true },
-    { icon: MapPin, label: 'Location Settings', path: '/location', comingSoon: true },
-    { icon: HelpCircle, label: 'Help & Support', path: '/support', comingSoon: true },
+  const Layout = isCompany ? CompanyLayout : MobileLayout;
+
+  const faqItems = [
+    { q: 'How do I get verified?', a: 'Go to the Verify tab and submit your identity documents. Our team reviews submissions within 24-48 hours.' },
+    { q: 'How does payment work?', a: 'Payments are processed through Paystack. Funds are held in escrow until the job is completed and approved.' },
+    { q: 'How do I switch roles?', a: 'Individual accounts can switch between Job Giver and Service Provider roles with a 24-hour cooldown period.' },
+    { q: 'What are job slots?', a: 'Job slots limit how many active jobs you can have simultaneously. Upgrade your plan to get more slots.' },
+    { q: 'How do referrals work?', a: 'Share your referral code with friends. When they sign up and complete their first transaction, both of you earn rewards.' },
   ];
 
   return (
-    <MobileLayout>
+    <Layout>
+      {/* Profile Header */}
       <header className="p-4 safe-top flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Profile</h1>
         {!isEditing ? (
@@ -154,11 +188,11 @@ const Profile = () => {
         )}
       </header>
 
-      <div className="px-4 pb-4 space-y-6">
+      <div className="px-4 pb-4 space-y-4">
         {/* Profile Card */}
         <Card className="p-5">
           <div className="flex items-center gap-4">
-            <div className="relative">
+            <div className="relative w-20 h-20">
               {profile.avatar_url ? (
                 <img 
                   src={profile.avatar_url} 
@@ -172,13 +206,14 @@ const Profile = () => {
                   {isCompany ? <Building2 className="w-8 h-8" /> : displayName?.charAt(0) || 'U'}
                 </div>
               )}
+              {/* Verified badge - top right, never overlapping camera */}
               {profile.verification_status === 'verified' && (
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center">
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center z-10">
                   <CheckCircle className="w-4 h-4 text-success-foreground" />
                 </div>
               )}
-              {/* Avatar upload button */}
-              <label className="absolute bottom-0 right-0 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg">
+              {/* Camera icon - bottom right */}
+              <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg z-10">
                 {uploadingAvatar ? (
                   <Loader2 className="w-3.5 h-3.5 text-primary-foreground animate-spin" />
                 ) : (
@@ -207,11 +242,6 @@ const Profile = () => {
                 <>
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold text-xl text-foreground">{displayName || 'User'}</h2>
-                    <VerificationBadge 
-                      status={profile.verification_status as any} 
-                      accountType={isCompany ? 'company' : 'individual'}
-                      size="sm"
-                    />
                   </div>
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
                 </>
@@ -220,6 +250,11 @@ const Profile = () => {
                 <Badge variant={currentRole === 'requester' ? 'default' : 'secondary'}>
                   {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}
                 </Badge>
+                <VerificationBadge
+                  status={profile.verification_status as any}
+                  accountType={isCompany ? 'company' : 'individual'}
+                  size="sm"
+                />
                 {profile.verification_status === 'pending' && (
                   <Badge variant="outline" className="gap-1 text-warning border-warning">
                     <AlertCircle className="w-3 h-3" />
@@ -235,39 +270,22 @@ const Profile = () => {
             <div className="mt-4 space-y-3 pt-4 border-t border-border">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Phone</label>
-                <Input
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Phone number"
-                />
+                <Input value={editForm.phone} onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))} placeholder="Phone number" />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Location</label>
-                <Input
-                  value={editForm.location}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Your location"
-                />
+                <Input value={editForm.location} onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))} placeholder="Your location" />
               </div>
               {isCompany && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Company Address</label>
-                  <Input
-                    value={editForm.company_address}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, company_address: e.target.value }))}
-                    placeholder="Company address"
-                  />
+                  <Input value={editForm.company_address} onChange={(e) => setEditForm(prev => ({ ...prev, company_address: e.target.value }))} placeholder="Company address" />
                 </div>
               )}
               {isProvider && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Service Description</label>
-                  <Textarea
-                    value={editForm.service_description}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, service_description: e.target.value }))}
-                    placeholder="Describe your services..."
-                    rows={3}
-                  />
+                  <Textarea value={editForm.service_description} onChange={(e) => setEditForm(prev => ({ ...prev, service_description: e.target.value }))} placeholder="Describe your services..." rows={3} />
                 </div>
               )}
             </div>
@@ -276,12 +294,8 @@ const Profile = () => {
           {/* Display info when not editing */}
           {!isEditing && (
             <div className="mt-4 pt-4 border-t border-border space-y-2">
-              {profile.phone && (
-                <p className="text-sm text-muted-foreground">📞 {profile.phone}</p>
-              )}
-              {profile.location && (
-                <p className="text-sm text-muted-foreground">📍 {profile.location}</p>
-              )}
+              {profile.phone && <p className="text-sm text-muted-foreground">📞 {profile.phone}</p>}
+              {profile.location && <p className="text-sm text-muted-foreground">📍 {profile.location}</p>}
               {isProvider && providerProfile?.service_description && (
                 <p className="text-sm text-muted-foreground">{providerProfile.service_description}</p>
               )}
@@ -289,124 +303,355 @@ const Profile = () => {
           )}
         </Card>
 
-        {/* Role Switch */}
-        <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleSwitchRole}>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
-              <RefreshCw className="w-6 h-6 text-secondary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">Switch Role</h3>
-              <p className="text-sm text-muted-foreground">
-                Currently: {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </div>
-        </Card>
+        {/* Tabs */}
+        <Tabs defaultValue={initialTab} className="w-full">
+          <ScrollArea className="w-full">
+            <TabsList className="w-max gap-1 bg-muted/50 px-1">
+              <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
+              <TabsTrigger value="foryou" className="text-xs">For You</TabsTrigger>
+              <TabsTrigger value="favourites" className="text-xs">Favorites</TabsTrigger>
+              <TabsTrigger value="referrals" className="text-xs">Referrals</TabsTrigger>
+              <TabsTrigger value="payments" className="text-xs">Payments</TabsTrigger>
+              <TabsTrigger value="alerts" className="text-xs">
+                Alerts
+                {unreadCount > 0 && (
+                  <span className="ml-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full inline-flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
+              <TabsTrigger value="ads" className="text-xs">Ad Manager</TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
-        {/* Provider Stats */}
-        {isProvider && providerProfile && (
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
-              <div className="text-2xl font-bold text-primary">
-                {providerProfile.active_job_slots || 0}/{providerProfile.max_job_slots || 3}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Active Slots</div>
-            </Card>
-            <Card className="p-4 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-2xl font-bold text-foreground">{providerProfile.rating || 0}</span>
-                <Star className="w-4 h-4 text-warning fill-warning" />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Rating</div>
-            </Card>
-            <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
-              <div className="text-2xl font-bold text-success">{providerProfile.on_time_delivery_score || 100}%</div>
-              <div className="text-xs text-muted-foreground mt-1">On-Time</div>
-            </Card>
-          </div>
-        )}
-
-        {/* Requester Stats */}
-        {!isProvider && (
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
-              <div className="text-2xl font-bold text-primary">
-                {(profile as any).requester_active_slots || 0}/{(profile as any).requester_max_slots || 3}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Active Jobs</div>
-            </Card>
-            <Card className="p-4 text-center">
-              <div className="text-2xl font-bold text-foreground">
-                {(profile as any).requester_completed_jobs || 0}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Completed</div>
-            </Card>
-            <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-2xl font-bold text-success">{(profile as any).requester_rating || 0}</span>
-                <Star className="w-4 h-4 text-warning fill-warning" />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Rating</div>
-            </Card>
-          </div>
-        )}
-
-        {/* Work Showcase (Provider only) */}
-        {isProvider && providerProfile && (
-          <WorkShowcaseGallery
-            providerProfileId={providerProfile.id}
-            isOwner={true}
-          />
-        )}
-
-        {/* Menu */}
-        <div className="space-y-2">
-          {menuItems.map((item, index) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card 
-                className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => {
-                  if (item.comingSoon) {
-                    toast({ title: 'Coming Soon', description: `${item.label} will be available soon!` });
-                  } else {
-                    navigate(item.path);
-                  }
-                }}
-              >
+          {/* ===== PROFILE TAB ===== */}
+          <TabsContent value="profile" className="space-y-4">
+            {/* Role Switch (individuals only) */}
+            {!isCompany && (
+              <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleSwitchRole}>
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-secondary" />
                   </div>
-                  <span className="flex-1 font-medium text-foreground">{item.label}</span>
-                  {item.comingSoon ? (
-                    <Badge variant="outline" className="text-xs">Soon</Badge>
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Switch Role</h3>
+                    <p className="text-sm text-muted-foreground">Currently: {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
               </Card>
-            </motion.div>
-          ))}
-        </div>
+            )}
 
-        {/* Logout */}
-        <Button
-          variant="ghost"
-          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5 mr-2" />
-          Log Out
-        </Button>
+            {/* Provider Stats */}
+            {isProvider && providerProfile && (
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
+                  <div className="text-2xl font-bold text-primary">{providerProfile.active_job_slots || 0}/{providerProfile.max_job_slots || 3}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Active Slots</div>
+                </Card>
+                <Card className="p-4 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-2xl font-bold text-foreground">{providerProfile.rating || 0}</span>
+                    <Star className="w-4 h-4 text-warning fill-warning" />
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Rating</div>
+                </Card>
+                <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
+                  <div className="text-2xl font-bold text-success">{providerProfile.on_time_delivery_score || 100}%</div>
+                  <div className="text-xs text-muted-foreground mt-1">On-Time</div>
+                </Card>
+              </div>
+            )}
+
+            {/* Requester Stats */}
+            {!isProvider && (
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="p-4 text-center bg-gradient-to-br from-primary/5 to-transparent">
+                  <div className="text-2xl font-bold text-primary">{profile.requester_active_slots || 0}/{profile.requester_max_slots || 3}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Active Jobs</div>
+                </Card>
+                <Card className="p-4 text-center">
+                  <div className="text-2xl font-bold text-foreground">{profile.requester_completed_jobs || 0}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Completed</div>
+                </Card>
+                <Card className="p-4 text-center bg-gradient-to-br from-success/5 to-transparent">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="text-2xl font-bold text-success">{profile.requester_rating || 0}</span>
+                    <Star className="w-4 h-4 text-warning fill-warning" />
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Rating</div>
+                </Card>
+              </div>
+            )}
+
+            {/* Verification Status */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm">Verification</h3>
+                    <p className="text-xs text-muted-foreground">Identity verification status</p>
+                  </div>
+                </div>
+                <VerificationStatus status={profile.verification_status as any} />
+              </div>
+            </Card>
+
+            {/* Work Showcase (Provider only) */}
+            {isProvider && providerProfile && (
+              <WorkShowcaseGallery providerProfileId={providerProfile.id} isOwner={true} />
+            )}
+
+            {/* Logout */}
+            <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+              <LogOut className="w-5 h-5 mr-2" />
+              Log Out
+            </Button>
+          </TabsContent>
+
+          {/* ===== FOR YOU TAB ===== */}
+          <TabsContent value="foryou" className="space-y-4">
+            <Card className="p-5">
+              <h3 className="font-semibold text-foreground mb-3">Personalized Insights</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5">
+                  <Star className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Your Rating</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isProvider ? `${providerProfile?.rating || 0} stars from ${providerProfile?.review_count || 0} reviews` :
+                        `${profile.requester_rating || 0} stars from ${profile.requester_review_count || 0} reviews`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5">
+                  <CheckCircle className="w-5 h-5 text-success" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Jobs Completed</p>
+                    <p className="text-xs text-muted-foreground">{profile.requester_completed_jobs || 0} total completed jobs</p>
+                  </div>
+                </div>
+                {isProvider && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/5">
+                    <MapPin className="w-5 h-5 text-warning" />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">On-Time Delivery</p>
+                      <p className="text-xs text-muted-foreground">{providerProfile?.on_time_delivery_score || 100}% on-time rate</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* ===== FAVOURITES TAB ===== */}
+          <TabsContent value="favourites" className="space-y-3">
+            {favLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : favourites.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">No favourites yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Save providers or requesters to find them quickly</p>
+              </Card>
+            ) : (
+              favourites.map((fav) => (
+                <Card key={fav.id} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={fav.profile?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {fav.profile?.full_name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground text-sm">
+                        {fav.profile?.account_type === 'company' ? fav.profile?.company_name : fav.profile?.full_name || 'User'}
+                      </h4>
+                      {fav.profile?.location && (
+                        <p className="text-xs text-muted-foreground">📍 {fav.profile.location}</p>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => removeFavourite(fav.favourite_user_id)} className="text-destructive">
+                      <Heart className="w-4 h-4 fill-current" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          {/* ===== REFERRALS TAB ===== */}
+          <TabsContent value="referrals" className="space-y-4">
+            <Card className="p-5">
+              <h3 className="font-semibold text-foreground mb-3">Your Referral Code</h3>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted/50 rounded-lg p-3 text-center font-mono text-lg font-bold text-foreground tracking-wider">
+                  {referralCode}
+                </div>
+                <Button variant="outline" size="icon" onClick={copyReferralCode}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({ title: 'Join TaskIt', text: `Use my referral code: ${referralCode}` });
+                  } else {
+                    copyReferralCode();
+                  }
+                }}>
+                  <Share2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 text-center">
+                <div className="text-2xl font-bold text-primary">{completedCount}</div>
+                <div className="text-xs text-muted-foreground">Completed</div>
+              </Card>
+              <Card className="p-4 text-center">
+                <div className="text-2xl font-bold text-warning">{pendingCount}</div>
+                <div className="text-xs text-muted-foreground">Pending</div>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ===== PAYMENTS TAB ===== */}
+          <TabsContent value="payments" className="space-y-4">
+            <h3 className="font-semibold text-foreground">Subscription Plans</h3>
+
+            {/* Individual Plans */}
+            {!isCompany && (
+              <div className="space-y-3">
+                {/* Provider Slot Boost */}
+                {isProvider && (
+                  <Card className="p-4 border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-foreground">Slot Boost</h4>
+                      <Badge>₦4,500/month</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">Get extra job slots and priority in discovery.</p>
+                    <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('provider_slot_boost', 4500)}>
+                      {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      Subscribe Now
+                    </Button>
+                  </Card>
+                )}
+
+                {/* Requester Unlimited */}
+                {!isProvider && (
+                  <Card className="p-4 border-secondary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-foreground">Unlimited Hiring</h4>
+                      <Badge variant="secondary">₦7,500/month</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">Unlimited job postings, priority support, and ad-free experience.</p>
+                    <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 7500)}>
+                      {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                      Subscribe Now
+                    </Button>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Company Plans */}
+            {isCompany && (
+              <div className="space-y-3">
+                <Card className="p-4 border-primary/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-foreground">Business Plan</h4>
+                    <Badge>₦25,000/month</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">Essential hiring tools, up to 10 active jobs.</p>
+                  <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 25000)}>
+                    {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                    Subscribe Now
+                  </Button>
+                </Card>
+                <Card className="p-4 border-secondary/20 bg-gradient-to-br from-secondary/5 to-transparent">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-foreground">Professional Plan</h4>
+                    <Badge variant="secondary">₦50,000/month</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">Full access including service rendering, unlimited jobs, and premium support.</p>
+                  <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 50000)}>
+                    {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                    Subscribe Now
+                  </Button>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ===== ALERTS TAB ===== */}
+          <TabsContent value="alerts" className="space-y-3">
+            {unreadCount > 0 && (
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs">Mark all read</Button>
+              </div>
+            )}
+            {notifications.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">No notifications yet</p>
+              </Card>
+            ) : (
+              notifications.map((n) => (
+                <Card key={n.id} className={`p-4 cursor-pointer transition-colors ${!n.is_read ? 'bg-primary/5 border-primary/20' : ''}`}
+                  onClick={() => !n.is_read && markAsRead(n.id)}>
+                  <div className="flex items-start gap-3">
+                    {!n.is_read && <div className="w-2 h-2 bg-primary rounded-full mt-1.5 shrink-0" />}
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground text-sm">{n.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{n.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          {/* ===== HELP TAB ===== */}
+          <TabsContent value="help" className="space-y-3">
+            <h3 className="font-semibold text-foreground">Frequently Asked Questions</h3>
+            {faqItems.map((item, i) => (
+              <Card key={i} className="p-4">
+                <h4 className="font-medium text-foreground text-sm mb-2">{item.q}</h4>
+                <p className="text-xs text-muted-foreground">{item.a}</p>
+              </Card>
+            ))}
+          </TabsContent>
+
+          {/* ===== AD MANAGER TAB ===== */}
+          <TabsContent value="ads" className="space-y-4">
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-foreground">Ad Manager</h3>
+                <Button size="sm" onClick={() => toast({ title: 'Ad creation', description: 'Create ads from the Ad Manager page coming in next update.' })}>
+                  <Megaphone className="w-4 h-4 mr-1" />
+                  Create Ad
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Create and manage Instagram-style ads to promote your services or products.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Card className="p-3 text-center bg-primary/5">
+                  <p className="text-lg font-bold text-primary">₦500</p>
+                  <p className="text-xs text-muted-foreground">Basic Reach</p>
+                </Card>
+                <Card className="p-3 text-center bg-secondary/5">
+                  <p className="text-lg font-bold text-secondary">₦5,000+</p>
+                  <p className="text-xs text-muted-foreground">Premium Reach</p>
+                </Card>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-    </MobileLayout>
+    </Layout>
   );
 };
 
