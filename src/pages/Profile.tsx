@@ -26,6 +26,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useFavourites } from '@/hooks/useFavourites';
 import { useReferrals } from '@/hooks/useReferrals';
 import { usePaystackPayment } from '@/hooks/usePaystackPayment';
+import { useFeedback } from '@/hooks/useFeedback';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -41,8 +42,13 @@ const Profile = () => {
   const { favourites, loading: favLoading, removeFavourite } = useFavourites();
   const { referralLink, referredProviders, referredRequesters, totalRewardsEarned } = useReferrals();
   const { initializePayment, loading: paymentLoading } = usePaystackPayment();
+  const { submitFeedback, submitting: feedbackSubmitting, canSubmit: canSubmitFeedback, FEEDBACK_CATEGORIES } = useFeedback();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackFile, setFeedbackFile] = useState<File | null>(null);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [editForm, setEditForm] = useState({
     full_name: '',
     phone: '',
@@ -321,6 +327,7 @@ const Profile = () => {
                 )}
               </TabsTrigger>
               <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
+              <TabsTrigger value="feedback" className="text-xs">Feedback</TabsTrigger>
               <TabsTrigger value="ads" className="text-xs">Ad Manager</TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
@@ -657,6 +664,92 @@ const Profile = () => {
           </TabsContent>
 
           {/* ===== AD MANAGER TAB ===== */}
+          {/* ===== FEEDBACK TAB ===== */}
+          <TabsContent value="feedback" className="space-y-4">
+            <Card className="p-5">
+              <h3 className="font-semibold text-lg text-foreground mb-1">Help us improve QUT</h3>
+              <p className="text-sm text-muted-foreground mb-4">Your feedback helps us build a better experience.</p>
+
+              {feedbackSuccess ? (
+                <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
+                  <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+                  <p className="font-semibold text-foreground">Thank you. Your feedback has been sent.</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => { setFeedbackSuccess(false); setFeedbackCategory(''); setFeedbackMessage(''); setFeedbackFile(null); }}>
+                    Send Another
+                  </Button>
+                </motion.div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
+                    <select
+                      value={feedbackCategory}
+                      onChange={(e) => setFeedbackCategory(e.target.value)}
+                      className="flex h-12 w-full rounded-lg border border-input bg-background px-4 py-3 text-base transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-primary/20 focus-visible:outline-none"
+                    >
+                      <option value="">Select a category...</option>
+                      {FEEDBACK_CATEGORIES.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Message (20–300 words)</label>
+                    <Textarea
+                      value={feedbackMessage}
+                      onChange={(e) => setFeedbackMessage(e.target.value)}
+                      placeholder="Tell us what's on your mind..."
+                      rows={5}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {feedbackMessage.trim().split(/\s+/).filter(Boolean).length} / 300 words
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1 block">Attachment (optional)</label>
+                    <Input
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={(e) => setFeedbackFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+
+                  <Button
+                    className="w-full"
+                    disabled={
+                      feedbackSubmitting ||
+                      !feedbackCategory ||
+                      feedbackMessage.trim().split(/\s+/).filter(Boolean).length < 20 ||
+                      feedbackMessage.trim().split(/\s+/).filter(Boolean).length > 300 ||
+                      !canSubmitFeedback
+                    }
+                    onClick={async () => {
+                      const { error } = await submitFeedback({
+                        category: feedbackCategory,
+                        message: feedbackMessage,
+                        role: currentRole,
+                        attachmentFile: feedbackFile,
+                      });
+                      if (!error) {
+                        setFeedbackSuccess(true);
+                      } else if (error.message !== 'Rate limited') {
+                        toast({ title: 'Error', description: 'Failed to submit feedback. Please try again.', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    {feedbackSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Submit Feedback
+                  </Button>
+                  {!canSubmitFeedback && (
+                    <p className="text-xs text-muted-foreground text-center">Please wait 2 minutes between submissions.</p>
+                  )}
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+
           <TabsContent value="ads" className="space-y-4">
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
