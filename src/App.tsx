@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import ViewProfile from "./pages/ViewProfile";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/company-dashboard" element={<CompanyDashboard />} />
                 <Route path="/discover" element={<Discover />} />
+                <Route path="/view-profile/:userId" element={<ViewProfile />} />
                 <Route path="/find-jobs" element={<FindJobs />} />
                 <Route path="/post-job" element={<PostJob />} />
                 <Route path="/my-jobs" element={<MyJobs />} />

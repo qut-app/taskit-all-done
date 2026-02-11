@@ -10,6 +10,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useJobs } from '@/hooks/useJobs';
 import { useCategories } from '@/hooks/useCategories';
 import { useToast } from '@/hooks/use-toast';
+import PostJobCategorySelector from '@/components/PostJobCategorySelector';
 
 const DELIVERY_TIMES = ['1 day', '2 days', '3 days', '1 week', '2 weeks', '1 month'];
 
@@ -170,22 +171,11 @@ const PostJob = () => {
         </div>
 
         {/* Category */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Category</label>
-          <div className="flex flex-wrap gap-2">
-            {categories.slice(0, 12).map((category) => (
-              <Button
-                key={category.id}
-                type="button"
-                variant={formData.category === category.name ? 'soft' : 'outline'}
-                size="sm"
-                onClick={() => setFormData({ ...formData, category: category.name })}
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
-        </div>
+        <PostJobCategorySelector
+          categories={categories}
+          selected={formData.category}
+          onSelect={(cat) => setFormData({ ...formData, category: cat })}
+        />
 
         {/* Service Mode */}
         <div className="space-y-2">

@@ -1,30 +1,45 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Wifi, Map, Loader2 } from 'lucide-react';
+import { Search, Filter, Wifi, Map, Loader2, MapPin, Building2, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import ProviderCard from '@/components/cards/ProviderCard';
+import { OnlineIndicator } from '@/components/ui/OnlineIndicator';
 import { useAuth } from '@/hooks/useAuth';
 import { useProviders } from '@/hooks/useProviders';
 import { useCategories } from '@/hooks/useCategories';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useProfile } from '@/hooks/useProfile';
 
 const Discover = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
   const { categories } = useCategories();
+  const geo = useGeolocation();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<'all' | 'online' | 'offline'>('all');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'individual' | 'company'>('all');
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+
+  // Set default location from geolocation or profile
+  useEffect(() => {
+    if (geo.locationName && !locationFilter) {
+      setLocationFilter(geo.locationName);
+    } else if (!geo.locationName && profile?.location && !locationFilter) {
+      setLocationFilter(profile.location);
+    }
+  }, [geo.locationName, profile?.location]);
   
   const { providers, loading: providersLoading } = useProviders({
     category: selectedCategory || undefined,
     serviceMode: serviceMode === 'all' ? undefined : serviceMode,
   });
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -32,12 +47,24 @@ const Discover = () => {
   }, [user, authLoading, navigate]);
 
   const filteredProviders = providers.filter((provider) => {
-    if (!searchQuery) return true;
-    const matchesName = provider.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = (provider.service_categories || []).some(
-      c => c.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    return matchesName || matchesCategory;
+    // Search filter
+    if (searchQuery) {
+      const matchesName = provider.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = (provider.service_categories || []).some(
+        c => c.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (!matchesName && !matchesCategory) return false;
+    }
+    // Account type filter
+    if (accountTypeFilter !== 'all') {
+      if ((provider.profile as any)?.account_type !== accountTypeFilter) return false;
+    }
+    // Location filter
+    if (locationFilter) {
+      const providerLoc = provider.profile?.location?.toLowerCase() || '';
+      if (!providerLoc.includes(locationFilter.toLowerCase())) return false;
+    }
+    return true;
   });
 
   if (authLoading) {
@@ -50,7 +77,6 @@ const Discover = () => {
 
   return (
     <MobileLayout>
-      {/* Header */}
       <header className="p-4 safe-top space-y-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Discover</h1>
@@ -71,42 +97,53 @@ const Discover = () => {
 
         {/* Service Mode Filter */}
         <div className="flex gap-2">
+          <Button variant={serviceMode === 'all' ? 'soft' : 'ghost'} size="sm" onClick={() => setServiceMode('all')}>All</Button>
+          <Button variant={serviceMode === 'online' ? 'soft' : 'ghost'} size="sm" onClick={() => setServiceMode('online')} className="gap-1">
+            <Wifi className="w-4 h-4" />Online
+          </Button>
+          <Button variant={serviceMode === 'offline' ? 'soft' : 'ghost'} size="sm" onClick={() => setServiceMode('offline')} className="gap-1">
+            <Map className="w-4 h-4" />Offline
+          </Button>
+        </div>
+
+        {/* Footer Filters: Location + Account Type */}
+        <div className="flex gap-2">
           <Button
-            variant={serviceMode === 'all' ? 'soft' : 'ghost'}
+            variant={locationFilter ? 'soft' : 'outline'}
             size="sm"
-            onClick={() => setServiceMode('all')}
+            className="gap-1"
+            onClick={() => {
+              if (locationFilter) {
+                setLocationFilter(null);
+              } else {
+                setLocationFilter(geo.locationName || profile?.location || '');
+              }
+            }}
           >
-            All
+            <MapPin className="w-3.5 h-3.5" />
+            {locationFilter || 'Location'}
           </Button>
           <Button
-            variant={serviceMode === 'online' ? 'soft' : 'ghost'}
+            variant={accountTypeFilter === 'individual' ? 'soft' : 'ghost'}
             size="sm"
-            onClick={() => setServiceMode('online')}
             className="gap-1"
+            onClick={() => setAccountTypeFilter(accountTypeFilter === 'individual' ? 'all' : 'individual')}
           >
-            <Wifi className="w-4 h-4" />
-            Online
+            <User className="w-3.5 h-3.5" />Individual
           </Button>
           <Button
-            variant={serviceMode === 'offline' ? 'soft' : 'ghost'}
+            variant={accountTypeFilter === 'company' ? 'soft' : 'ghost'}
             size="sm"
-            onClick={() => setServiceMode('offline')}
             className="gap-1"
+            onClick={() => setAccountTypeFilter(accountTypeFilter === 'company' ? 'all' : 'company')}
           >
-            <Map className="w-4 h-4" />
-            Offline
+            <Building2 className="w-3.5 h-3.5" />Company
           </Button>
         </div>
 
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          <Button
-            variant={selectedCategory === null ? 'soft' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedCategory(null)}
-          >
-            All
-          </Button>
+          <Button variant={selectedCategory === null ? 'soft' : 'outline'} size="sm" onClick={() => setSelectedCategory(null)}>All</Button>
           {categories.slice(0, 8).map((category) => (
             <Button
               key={category.id}
@@ -128,8 +165,7 @@ const Discover = () => {
             {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} found
           </p>
           <Button variant="ghost" size="sm" className="gap-1">
-            <Filter className="w-4 h-4" />
-            Filters
+            <Filter className="w-4 h-4" />Filters
           </Button>
         </div>
 
@@ -145,7 +181,11 @@ const Discover = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <ProviderCard provider={provider} />
+              <ProviderCard
+                provider={provider}
+                onView={() => navigate(`/view-profile/${provider.user_id}`)}
+                onHire={() => navigate(`/view-profile/${provider.user_id}`)}
+              />
             </motion.div>
           ))
         ) : (
@@ -154,9 +194,7 @@ const Discover = () => {
               <Search className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-foreground">No providers found</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search or filters
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
           </div>
         )}
       </div>
