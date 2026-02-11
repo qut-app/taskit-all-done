@@ -27,6 +27,7 @@ import { useFavourites } from '@/hooks/useFavourites';
 import { useReferrals } from '@/hooks/useReferrals';
 import { usePaystackPayment } from '@/hooks/usePaystackPayment';
 import { useFeedback } from '@/hooks/useFeedback';
+import { AdManagerTab } from '@/components/profile/AdManagerTab';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -751,26 +752,7 @@ const Profile = () => {
           </TabsContent>
 
           <TabsContent value="ads" className="space-y-4">
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground">Ad Manager</h3>
-                <Button size="sm" onClick={() => toast({ title: 'Ad creation', description: 'Create ads from the Ad Manager page coming in next update.' })}>
-                  <Megaphone className="w-4 h-4 mr-1" />
-                  Create Ad
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">Create and manage Instagram-style ads to promote your services or products.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="p-3 text-center bg-primary/5">
-                  <p className="text-lg font-bold text-primary">₦500</p>
-                  <p className="text-xs text-muted-foreground">Basic Reach</p>
-                </Card>
-                <Card className="p-3 text-center bg-secondary/5">
-                  <p className="text-lg font-bold text-secondary">₦5,000+</p>
-                  <p className="text-xs text-muted-foreground">Premium Reach</p>
-                </Card>
-              </div>
-            </Card>
+            <AdManagerTab />
           </TabsContent>
         </Tabs>
       </div>

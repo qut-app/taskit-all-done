@@ -17,45 +17,69 @@ export type Database = {
       ads: {
         Row: {
           ad_type: string | null
+          approval_status: string | null
+          budget: number | null
           clicks: number | null
           created_at: string
+          description: string | null
           end_date: string | null
           id: string
           image_url: string | null
           impressions: number | null
           is_active: boolean | null
           link_url: string | null
+          location_targeting: string | null
+          paystack_reference: string | null
+          reject_reason: string | null
           spend_amount: number | null
           start_date: string | null
+          target_audience: string | null
           title: string
+          user_id: string | null
         }
         Insert: {
           ad_type?: string | null
+          approval_status?: string | null
+          budget?: number | null
           clicks?: number | null
           created_at?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
           impressions?: number | null
           is_active?: boolean | null
           link_url?: string | null
+          location_targeting?: string | null
+          paystack_reference?: string | null
+          reject_reason?: string | null
           spend_amount?: number | null
           start_date?: string | null
+          target_audience?: string | null
           title: string
+          user_id?: string | null
         }
         Update: {
           ad_type?: string | null
+          approval_status?: string | null
+          budget?: number | null
           clicks?: number | null
           created_at?: string
+          description?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
           impressions?: number | null
           is_active?: boolean | null
           link_url?: string | null
+          location_targeting?: string | null
+          paystack_reference?: string | null
+          reject_reason?: string | null
           spend_amount?: number | null
           start_date?: string | null
+          target_audience?: string | null
           title?: string
+          user_id?: string | null
         }
         Relationships: []
       }
