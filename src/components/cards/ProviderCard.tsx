@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
+import { OnlineIndicator } from '@/components/ui/OnlineIndicator';
 import { Tables } from '@/integrations/supabase/types';
 
 type ProviderProfile = Tables<'provider_profiles'>;
@@ -15,6 +16,8 @@ interface Profile {
   account_type?: string | null;
   company_name?: string | null;
   avatar_url?: string | null;
+  is_online?: boolean | null;
+  last_seen_at?: string | null;
 }
 
 interface ProviderWithProfile extends ProviderProfile {
@@ -58,7 +61,7 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
               )}
             </motion.div>
             {profile?.verification_status === 'verified' && (
-              <div className="absolute -bottom-1 -right-1">
+              <div className="absolute -top-1 -right-1">
                 <VerificationBadge 
                   status="verified" 
                   accountType={isCompany ? 'company' : 'individual'}
@@ -66,6 +69,12 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
                 />
               </div>
             )}
+            <OnlineIndicator
+              isOnline={profile?.is_online}
+              lastSeenAt={profile?.last_seen_at}
+              size="sm"
+              className="absolute -bottom-0.5 -right-0.5"
+            />
           </div>
 
           {/* Info */}
