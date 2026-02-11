@@ -47,6 +47,15 @@ const Dashboard = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // Redirect company accounts to company dashboard
+  useEffect(() => {
+    if (!authLoading && !profileLoading && profile) {
+      if ((profile as any).account_type === 'company') {
+        navigate('/company-dashboard', { replace: true });
+      }
+    }
+  }, [authLoading, profileLoading, profile, navigate]);
+
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">

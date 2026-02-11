@@ -72,6 +72,13 @@ const Onboarding = () => {
     if (currentRole) setSelectedRole(currentRole as 'requester' | 'provider');
   }, [currentRole]);
 
+  // Company accounts are always requesters
+  useEffect(() => {
+    if (accountType === 'company') {
+      setSelectedRole('requester');
+    }
+  }, [accountType]);
+
   useEffect(() => {
     if (profile) {
       setFormData(prev => ({
@@ -281,25 +288,27 @@ const Onboarding = () => {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">What would you like to do?</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {([{ role: 'requester' as const, title: 'I Need Help', desc: 'Post jobs and hire providers' },
-                     { role: 'provider' as const, title: 'I Offer Services', desc: 'Find clients and earn' }]).map(({ role, title, desc }) => (
-                    <motion.div key={role} whileTap={{ scale: 0.98 }}>
-                      <Card
-                        className={`p-4 cursor-pointer transition-all duration-200 ${
-                          selectedRole === role ? 'border-2 border-primary bg-primary/5' : 'hover:border-muted-foreground/30'
-                        }`}
-                        onClick={() => setSelectedRole(role)}
-                      >
-                        <h3 className="font-semibold text-foreground">{title}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">{desc}</p>
-                      </Card>
-                    </motion.div>
-                  ))}
+              {accountType === 'individual' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">What would you like to do?</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {([{ role: 'requester' as const, title: 'I Need Help', desc: 'Post jobs and hire providers' },
+                       { role: 'provider' as const, title: 'I Offer Services', desc: 'Find clients and earn' }]).map(({ role, title, desc }) => (
+                      <motion.div key={role} whileTap={{ scale: 0.98 }}>
+                        <Card
+                          className={`p-4 cursor-pointer transition-all duration-200 ${
+                            selectedRole === role ? 'border-2 border-primary bg-primary/5' : 'hover:border-muted-foreground/30'
+                          }`}
+                          onClick={() => setSelectedRole(role)}
+                        >
+                          <h3 className="font-semibold text-foreground">{title}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         );

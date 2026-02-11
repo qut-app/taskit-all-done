@@ -18,6 +18,7 @@ import MyJobs from "./pages/MyJobs";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import CompanyDashboard from "./pages/CompanyDashboard";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/role-select" element={<RoleSelect />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/company-dashboard" element={<CompanyDashboard />} />
                 <Route path="/discover" element={<Discover />} />
                 <Route path="/find-jobs" element={<FindJobs />} />
                 <Route path="/post-job" element={<PostJob />} />
