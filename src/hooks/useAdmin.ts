@@ -199,7 +199,7 @@ export function useAdminData() {
     return { error };
   };
 
-  const updateAd = async (id: string, data: { is_active?: boolean; title?: string }) => {
+  const updateAd = async (id: string, data: Record<string, any>) => {
     const { error } = await supabase
       .from('ads')
       .update(data)

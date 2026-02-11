@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Eye,
   FileText,
-  BadgeCheck
+  BadgeCheck,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,7 @@ import { useAdmin, useAdminData } from '@/hooks/useAdmin';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedback } from '@/hooks/useFeedback';
+import { FeedbackAnalytics } from '@/components/admin/FeedbackAnalytics';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -77,6 +79,8 @@ const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const { feedbacks, loading: feedbackLoading, updateFeedback } = useAdminFeedback();
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
+  const [feedbackView, setFeedbackView] = useState<'analytics' | 'list'>('analytics');
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
 
   // Loading state
   if (authLoading || adminLoading) {
@@ -626,88 +630,117 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Ads Tab */}
+          {/* Ads Approval Tab */}
           <TabsContent value="ads">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Advertisements</CardTitle>
-                <Dialog open={showAdDialog} onOpenChange={setShowAdDialog}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Ad
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Create Ad</DialogTitle>
-                      <DialogDescription>Add a new advertisement</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Title</label>
-                        <Input
-                          value={newAdTitle}
-                          onChange={(e) => setNewAdTitle(e.target.value)}
-                          placeholder="Ad title"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleCreateAd}>Create</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Ads Approval
+                  {ads.filter((a: any) => a.approval_status === 'pending_approval').length > 0 && (
+                    <Badge variant="destructive" className="animate-pulse">
+                      {ads.filter((a: any) => a.approval_status === 'pending_approval').length}
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {ads.length === 0 ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
                     <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">No ads created yet.</p>
+                    <p className="text-muted-foreground">No ads submitted yet.</p>
                   </motion.div>
                 ) : (
                   <AnimatePresence>
-                    {ads.map((ad, index) => (
+                    {ads.map((ad: any, index: number) => (
                       <motion.div
                         key={ad.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ delay: index * 0.05 }}
-                        className="p-4 bg-muted/30 rounded-xl border border-border"
+                        className="p-4 bg-muted/30 rounded-xl border border-border space-y-3"
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex items-start gap-3">
+                          {ad.image_url && (
+                            <div className="w-20 h-20 rounded-xl bg-muted overflow-hidden flex-shrink-0">
+                              <img src={ad.image_url} alt="Ad" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground">{ad.title}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">{ad.ad_type}</Badge>
-                              <Badge variant={ad.is_active ? 'default' : 'secondary'} className="text-xs">
-                                {ad.is_active ? 'Active' : 'Inactive'}
+                            {ad.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{ad.description}</p>}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Badge variant={
+                                ad.approval_status === 'approved' ? 'default' :
+                                ad.approval_status === 'rejected' ? 'destructive' :
+                                ad.approval_status === 'pending_approval' ? 'secondary' : 'outline'
+                              } className="text-xs capitalize">
+                                {(ad.approval_status || 'pending').replace('_', ' ')}
                               </Badge>
+                              {ad.budget && <Badge variant="outline" className="text-xs">₦{Number(ad.budget).toLocaleString()}</Badge>}
+                              {ad.paystack_reference && <Badge variant="outline" className="text-xs text-success">Paid ✓</Badge>}
+                              {ad.target_audience && <Badge variant="outline" className="text-xs">{ad.target_audience}</Badge>}
+                            </div>
+                            {ad.location_targeting && <p className="text-xs text-muted-foreground mt-1">📍 {ad.location_targeting}</p>}
+                            <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>{ad.impressions || 0} impressions</span>
+                              <span>{ad.clicks || 0} clicks</span>
+                              {ad.impressions > 0 && <span>{((ad.clicks / ad.impressions) * 100).toFixed(1)}% CTR</span>}
                             </div>
                           </div>
+                        </div>
+
+                        {ad.approval_status === 'pending_approval' && (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Rejection reason (required to reject)"
+                              value={rejectReasons[ad.id] || ''}
+                              onChange={e => setRejectReasons(prev => ({ ...prev, [ad.id]: e.target.value }))}
+                              className="text-xs"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 bg-success hover:bg-success/90"
+                                onClick={async () => {
+                                  const { error } = await updateAd(ad.id, { is_active: true, approval_status: 'approved' } as any);
+                                  if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                  else toast({ title: 'Ad approved and live!' });
+                                }}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 text-destructive border-destructive hover:bg-destructive/10"
+                                disabled={!rejectReasons[ad.id]?.trim()}
+                                onClick={async () => {
+                                  const { error } = await updateAd(ad.id, { approval_status: 'rejected', reject_reason: rejectReasons[ad.id], is_active: false } as any);
+                                  if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                  else { toast({ title: 'Ad rejected' }); setRejectReasons(prev => { const n = { ...prev }; delete n[ad.id]; return n; }); }
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {ad.approval_status === 'approved' && (
                           <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleToggleAdActive(ad.id, ad.is_active ?? true)}
-                            >
+                            <Button size="sm" variant="outline" onClick={() => handleToggleAdActive(ad.id, ad.is_active ?? true)}>
                               {ad.is_active ? 'Pause' : 'Enable'}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive"
-                              onClick={() => handleDeleteAd(ad.id)}
-                            >
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteAd(ad.id)}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </div>
+                        )}
+
+                        {ad.approval_status === 'rejected' && ad.reject_reason && (
+                          <p className="text-xs text-destructive">Reason: {ad.reject_reason}</p>
+                        )}
                       </motion.div>
                     ))}
                   </AnimatePresence>
@@ -782,150 +815,172 @@ const AdminDashboard = () => {
           </TabsContent>
           {/* Feedback Tab */}
           <TabsContent value="feedback">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">User Feedback</CardTitle>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const csv = [
-                      ['Date', 'Category', 'Role', 'Status', 'Priority', 'Message'].join(','),
-                      ...feedbacks.map((f: any) =>
-                        [
-                          new Date(f.created_at).toLocaleDateString(),
-                          f.category,
-                          f.role,
-                          f.status,
-                          f.priority || 'normal',
-                          `"${(f.message || '').replace(/"/g, '""')}"`,
-                        ].join(',')
-                      ),
-                    ].join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'feedback-export.csv';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                >
-                  Export CSV
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {feedbackLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : feedbacks.length === 0 ? (
-                  <p className="text-center py-8 text-muted-foreground">No feedback yet.</p>
-                ) : (
-                  <AnimatePresence>
-                    {feedbacks.map((fb: any, idx: number) => (
-                      <motion.div
-                        key={fb.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03 }}
-                        className="p-4 bg-muted/30 rounded-xl border border-border space-y-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs">{fb.category}</Badge>
-                              <Badge variant="secondary" className="text-xs capitalize">{fb.role}</Badge>
-                              <Badge
-                                variant={fb.status === 'New' ? 'destructive' : fb.status === 'Resolved' ? 'default' : 'secondary'}
-                                className="text-xs"
-                              >
-                                {fb.status}
-                              </Badge>
-                              {fb.priority === 'high' && <Badge className="text-xs bg-warning text-warning-foreground">High Priority</Badge>}
+            {/* Analytics / List Toggle */}
+            <div className="flex gap-2 mb-4">
+              <Button size="sm" variant={feedbackView === 'analytics' ? 'default' : 'outline'} onClick={() => setFeedbackView('analytics')}>
+                <BarChart3 className="w-4 h-4 mr-1" /> Analytics
+              </Button>
+              <Button size="sm" variant={feedbackView === 'list' ? 'default' : 'outline'} onClick={() => setFeedbackView('list')}>
+                <FileText className="w-4 h-4 mr-1" /> List
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => {
+                  const csv = [
+                    ['Date', 'Category', 'Role', 'Status', 'Priority', 'Message'].join(','),
+                    ...feedbacks.map((f: any) =>
+                      [
+                        new Date(f.created_at).toLocaleDateString(),
+                        f.category,
+                        f.role,
+                        f.status,
+                        f.priority || 'normal',
+                        `"${(f.message || '').replace(/"/g, '""')}"`,
+                      ].join(',')
+                    ),
+                  ].join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'feedback-export.csv';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Export CSV
+              </Button>
+            </div>
+
+            {feedbackView === 'analytics' ? (
+              <FeedbackAnalytics
+                feedbacks={feedbacks}
+                users={users}
+                onAutoFlag={async (id) => {
+                  const { error } = await updateFeedback(id, { priority: 'high' });
+                  if (!error) toast({ title: 'Flagged as high priority' });
+                }}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">User Feedback</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {feedbackLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : feedbacks.length === 0 ? (
+                    <p className="text-center py-8 text-muted-foreground">No feedback yet.</p>
+                  ) : (
+                    <AnimatePresence>
+                      {feedbacks.map((fb: any, idx: number) => (
+                        <motion.div
+                          key={fb.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.03 }}
+                          className="p-4 bg-muted/30 rounded-xl border border-border space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-xs">{fb.category}</Badge>
+                                <Badge variant="secondary" className="text-xs capitalize">{fb.role}</Badge>
+                                <Badge
+                                  variant={fb.status === 'New' ? 'destructive' : fb.status === 'Resolved' ? 'default' : 'secondary'}
+                                  className="text-xs"
+                                >
+                                  {fb.status}
+                                </Badge>
+                                {fb.priority === 'high' && <Badge className="text-xs bg-warning text-warning-foreground">High Priority</Badge>}
+                              </div>
+                              <p className="text-sm text-foreground mt-2">{fb.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(fb.created_at).toLocaleString()}
+                              </p>
+                              {fb.attachment_url && (
+                                <Button size="sm" variant="link" className="px-0 h-auto text-xs mt-1" onClick={() => window.open(fb.attachment_url, '_blank')}>
+                                  View Attachment
+                                </Button>
+                              )}
                             </div>
-                            <p className="text-sm text-foreground mt-2">{fb.message}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(fb.created_at).toLocaleString()}
-                            </p>
-                            {fb.attachment_url && (
-                              <Button size="sm" variant="link" className="px-0 h-auto text-xs mt-1" onClick={() => window.open(fb.attachment_url, '_blank')}>
-                                View Attachment
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Select
+                              defaultValue={fb.status}
+                              onValueChange={async (val) => {
+                                const { error } = await updateFeedback(fb.id, { status: val });
+                                if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                else toast({ title: 'Status updated' });
+                              }}
+                            >
+                              <SelectTrigger className="w-[130px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="New">New</SelectItem>
+                                <SelectItem value="Reviewing">Reviewing</SelectItem>
+                                <SelectItem value="Resolved">Resolved</SelectItem>
+                                <SelectItem value="Closed">Closed</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Select
+                              defaultValue={fb.priority || 'normal'}
+                              onValueChange={async (val) => {
+                                const { error } = await updateFeedback(fb.id, { priority: val });
+                                if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                else toast({ title: 'Priority updated' });
+                              }}
+                            >
+                              <SelectTrigger className="w-[110px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Textarea
+                              placeholder="Admin notes..."
+                              rows={2}
+                              className="text-xs"
+                              value={editingNotes[fb.id] ?? fb.admin_notes ?? ''}
+                              onChange={(e) => setEditingNotes(prev => ({ ...prev, [fb.id]: e.target.value }))}
+                            />
+                            {(editingNotes[fb.id] !== undefined && editingNotes[fb.id] !== (fb.admin_notes ?? '')) && (
+                              <Button
+                                size="sm"
+                                className="mt-1 text-xs h-7"
+                                onClick={async () => {
+                                  const { error } = await updateFeedback(fb.id, { admin_notes: editingNotes[fb.id] });
+                                  if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                  else {
+                                    toast({ title: 'Notes saved' });
+                                    setEditingNotes(prev => { const n = { ...prev }; delete n[fb.id]; return n; });
+                                  }
+                                }}
+                              >
+                                Save Notes
                               </Button>
                             )}
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Select
-                            defaultValue={fb.status}
-                            onValueChange={async (val) => {
-                              const { error } = await updateFeedback(fb.id, { status: val });
-                              if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                              else toast({ title: 'Status updated' });
-                            }}
-                          >
-                            <SelectTrigger className="w-[130px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="New">New</SelectItem>
-                              <SelectItem value="Reviewing">Reviewing</SelectItem>
-                              <SelectItem value="Resolved">Resolved</SelectItem>
-                              <SelectItem value="Closed">Closed</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <Select
-                            defaultValue={fb.priority || 'normal'}
-                            onValueChange={async (val) => {
-                              const { error } = await updateFeedback(fb.id, { priority: val });
-                              if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                              else toast({ title: 'Priority updated' });
-                            }}
-                          >
-                            <SelectTrigger className="w-[110px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="normal">Normal</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Textarea
-                            placeholder="Admin notes..."
-                            rows={2}
-                            className="text-xs"
-                            value={editingNotes[fb.id] ?? fb.admin_notes ?? ''}
-                            onChange={(e) => setEditingNotes(prev => ({ ...prev, [fb.id]: e.target.value }))}
-                          />
-                          {(editingNotes[fb.id] !== undefined && editingNotes[fb.id] !== (fb.admin_notes ?? '')) && (
-                            <Button
-                              size="sm"
-                              className="mt-1 text-xs h-7"
-                              onClick={async () => {
-                                const { error } = await updateFeedback(fb.id, { admin_notes: editingNotes[fb.id] });
-                                if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                                else {
-                                  toast({ title: 'Notes saved' });
-                                  setEditingNotes(prev => { const n = { ...prev }; delete n[fb.id]; return n; });
-                                }
-                              }}
-                            >
-                              Save Notes
-                            </Button>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                )}
-              </CardContent>
-            </Card>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
