@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Users, CheckCircle, XCircle, MessageSquare, Star } from 'lucide-react';
+import { Loader2, Users, CheckCircle, XCircle, MessageSquare, Star, MapPin, Shield, Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,8 @@ import EditJobDialog from '@/components/jobs/EditJobDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useJobs } from '@/hooks/useJobs';
+import { VerificationBadge } from '@/components/ui/VerificationBadge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -57,23 +59,53 @@ const MyJobs = () => {
       .order('created_at', { ascending: false });
 
     if (data && data.length > 0) {
-      // Get provider profiles
       const providerIds = data.map(a => a.provider_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('user_id', providerIds);
-
-      const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
       
-      setApplications(data.map(app => ({
-        ...app,
-        provider_profile: profileMap.get(app.provider_id),
-      })));
+      // Get profiles, provider profiles in parallel
+      const [profilesRes, providerProfilesRes] = await Promise.all([
+        supabase.from('profiles').select('*').in('user_id', providerIds),
+        supabase.from('provider_profiles').select('*').in('user_id', providerIds),
+      ]);
+
+      const profileMap = new Map((profilesRes.data || []).map(p => [p.user_id, p]));
+      const providerMap = new Map((providerProfilesRes.data || []).map(p => [p.user_id, p]));
+      
+      // Get the job to calculate distance
+      const currentJob = myJobs.find(j => j.id === jobId);
+      
+      setApplications(data.map(app => {
+        const provProfile = profileMap.get(app.provider_id);
+        const providerData = providerMap.get(app.provider_id);
+        
+        // Calculate distance if both have coordinates
+        let distance: number | null = null;
+        if (currentJob?.latitude && currentJob?.longitude && provProfile?.latitude && provProfile?.longitude) {
+          distance = calculateDistance(
+            Number(currentJob.latitude), Number(currentJob.longitude),
+            Number(provProfile.latitude), Number(provProfile.longitude)
+          );
+        }
+
+        return {
+          ...app,
+          provider_profile: provProfile,
+          provider_data: providerData,
+          distance,
+        };
+      }));
     } else {
       setApplications([]);
     }
     setLoadingApps(false);
+  };
+
+  // Haversine formula for distance calculation
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
   const handleAcceptProvider = async (applicationId: string, providerId: string) => {
@@ -362,13 +394,13 @@ const MyJobs = () => {
         </Tabs>
       </div>
 
-      {/* Applications Dialog */}
+      {/* Applications Comparison Dialog */}
       <Dialog open={!!selectedJobId} onOpenChange={() => setSelectedJobId(null)}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] overflow-y-auto max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Applications
+              Applicants ({applications.length})
             </DialogTitle>
           </DialogHeader>
 
@@ -385,14 +417,58 @@ const MyJobs = () => {
               {applications.map((app) => (
                 <Card key={app.id} className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                      {app.provider_profile?.full_name?.charAt(0) || 'P'}
-                    </div>
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={app.provider_profile?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                        {app.provider_profile?.full_name?.charAt(0) || 'P'}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground">
-                        {app.provider_profile?.full_name || 'Provider'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{app.provider_profile?.email}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-foreground">
+                          {app.provider_profile?.full_name || 'Provider'}
+                        </p>
+                        <VerificationBadge
+                          status={(app.provider_profile?.verification_status as any) || 'unverified'}
+                          accountType={app.provider_profile?.account_type === 'company' ? 'company' : 'individual'}
+                          size="sm"
+                        />
+                      </div>
+                      
+                      {/* Stats row */}
+                      <div className="flex flex-wrap gap-2 mt-1.5">
+                        {app.provider_data?.rating > 0 && (
+                          <div className="flex items-center gap-0.5 text-xs">
+                            <Star className="w-3 h-3 fill-warning text-warning" />
+                            <span className="font-medium">{Number(app.provider_data.rating).toFixed(1)}</span>
+                          </div>
+                        )}
+                        {app.provider_data?.review_count > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {app.provider_data.review_count} review{app.provider_data.review_count !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {app.provider_data?.on_time_delivery_score != null && (
+                          <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {app.provider_data.on_time_delivery_score}% on-time
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Distance */}
+                      {app.distance != null && (
+                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          {app.distance < 1 
+                            ? `${Math.round(app.distance * 1000)}m away`
+                            : `${app.distance.toFixed(1)} km away`}
+                          <span className="text-muted-foreground/70">
+                            (~{Math.max(1, Math.round(app.distance * 2))} min)
+                          </span>
+                        </div>
+                      )}
+
                       {app.message && (
                         <div className="mt-2 p-2 bg-muted/50 rounded-lg">
                           <p className="text-sm text-foreground flex items-start gap-1">
@@ -410,6 +486,14 @@ const MyJobs = () => {
                     <div className="flex gap-2 mt-3">
                       <Button
                         size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => navigate(`/view-profile/${app.provider_id}`)}
+                      >
+                        View Profile
+                      </Button>
+                      <Button
+                        size="sm"
                         className="flex-1 bg-success hover:bg-success/90"
                         onClick={() => handleAcceptProvider(app.id, app.provider_id)}
                       >
@@ -419,7 +503,7 @@ const MyJobs = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-destructive"
+                        className="text-destructive"
                         onClick={() => {
                           supabase
                             .from('job_applications')
@@ -430,8 +514,7 @@ const MyJobs = () => {
                             });
                         }}
                       >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
+                        <XCircle className="w-4 h-4" />
                       </Button>
                     </div>
                   )}

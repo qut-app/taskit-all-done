@@ -1,4 +1,4 @@
-import { MapPin, Clock, DollarSign, User, Pencil } from 'lucide-react';
+import { MapPin, Clock, DollarSign, User, Pencil, Scale, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,15 @@ interface JobCardProps {
   onView?: () => void;
   onApply?: () => void;
   onEdit?: () => void;
+  onBargain?: () => void;
+  showBargainHint?: boolean;
+  applicationStatus?: 'applied' | 'applying';
 }
 
-const JobCard = ({ job, variant = 'default', showActions = true, isOwner = false, onView, onApply, onEdit }: JobCardProps) => {
+const JobCard = ({ 
+  job, variant = 'default', showActions = true, isOwner = false, 
+  onView, onApply, onEdit, onBargain, showBargainHint, applicationStatus 
+}: JobCardProps) => {
   const statusColors = {
     open: 'success',
     assigned: 'warning',
@@ -110,13 +116,38 @@ const JobCard = ({ job, variant = 'default', showActions = true, isOwner = false
       </Badge>
 
       {showActions && job.status === 'open' && (
-        <div className="flex gap-2 mt-4">
-          <Button variant="outline" className="flex-1" onClick={onView}>
-            View Details
-          </Button>
-          <Button className="flex-1" onClick={onApply}>
-            Apply Now
-          </Button>
+        <div className="space-y-2 mt-4">
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={onView}>
+              View Details
+            </Button>
+            {applicationStatus === 'applied' ? (
+              <Button className="flex-1" disabled variant="soft">
+                Pending ⏳
+              </Button>
+            ) : applicationStatus === 'applying' ? (
+              <Button className="flex-1" disabled>
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                Applying...
+              </Button>
+            ) : (
+              <Button className="flex-1" onClick={onApply}>
+                Apply Now
+              </Button>
+            )}
+          </div>
+          {/* Bargain button */}
+          {onBargain && (
+            <Button variant="outline" className="w-full gap-1" size="sm" onClick={onBargain}>
+              <Scale className="w-4 h-4" />
+              Negotiate Price
+            </Button>
+          )}
+          {showBargainHint && !onBargain && (
+            <p className="text-[10px] text-center text-muted-foreground">
+              ⚖️ Subscribe to negotiate prices
+            </p>
+          )}
         </div>
       )}
     </Card>
