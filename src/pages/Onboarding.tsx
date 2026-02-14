@@ -49,6 +49,7 @@ const Onboarding = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     dateOfBirth: '',
+    gender: '' as '' | 'Male' | 'Female',
     location: '',
     latitude: null as number | null,
     longitude: null as number | null,
@@ -209,6 +210,7 @@ const Onboarding = () => {
         updateData.date_of_birth = formData.dateOfBirth || null;
         updateData.national_id_number = formData.nationalIdNumber || null;
         updateData.face_verification_url = formData.facePhotoUrl || null;
+        updateData.gender = formData.gender || null;
       } else {
         updateData.company_name = formData.companyName || null;
         updateData.cac_number = formData.cacNumber || null;
@@ -338,6 +340,23 @@ const Onboarding = () => {
                 <label className="text-sm font-medium text-foreground">Full Name</label>
                 <Input placeholder="Enter your full name" value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} className="h-12" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Gender <span className="text-destructive">*</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(['Male', 'Female'] as const).map(g => (
+                    <motion.div key={g} whileTap={{ scale: 0.98 }}>
+                      <Card
+                        className={`p-3 cursor-pointer text-center transition-all duration-200 ${
+                          formData.gender === g ? 'border-2 border-primary bg-primary/5' : 'hover:border-muted-foreground/30'
+                        }`}
+                        onClick={() => setFormData({ ...formData, gender: g })}
+                      >
+                        <span className="font-medium text-foreground">{g}</span>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Date of Birth</label>
@@ -616,7 +635,17 @@ const Onboarding = () => {
             {isLoading ? (<><Loader2 className="w-5 h-5 animate-spin mr-2" />Setting Up...</>) : (<>Go to Dashboard<ArrowRight className="w-5 h-5 ml-2" /></>)}
           </Button>
         ) : (
-          <Button size="lg" className="w-full h-14 text-base font-semibold" onClick={handleNext}>
+          <Button
+            size="lg"
+            className="w-full h-14 text-base font-semibold"
+            onClick={() => {
+              if (step === 'personal' && accountType === 'individual' && !formData.gender) {
+                toast({ title: 'Gender required', description: 'Please select your gender to continue.', variant: 'destructive' });
+                return;
+              }
+              handleNext();
+            }}
+          >
             Continue<ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         )}

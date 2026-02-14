@@ -138,11 +138,7 @@ const ViewProfile = () => {
               displayName?.charAt(0) || 'P'
             )}
           </div>
-          {profile?.verification_status === 'verified' && (
-            <div className="absolute -top-1 -right-1">
-              <VerificationBadge status="verified" accountType={isCompany ? 'company' : 'individual'} size="sm" />
-            </div>
-          )}
+          {/* Verified badge moved inline next to role label below */}
           <OnlineIndicator
             isOnline={profile?.is_online}
             lastSeenAt={profile?.last_seen_at}
@@ -155,6 +151,16 @@ const ViewProfile = () => {
           {displayName || 'Provider'}
           {isCompany && <Badge variant="outline">Business</Badge>}
         </h2>
+        <div className="flex items-center justify-center gap-2 mt-1">
+          <Badge variant={isCompany ? 'secondary' : 'default'}>
+            {isCompany ? 'Company' : 'Service Provider'}
+          </Badge>
+          <VerificationBadge
+            status={profile?.verification_status as any}
+            accountType={isCompany ? 'company' : 'individual'}
+            size="sm"
+          />
+        </div>
 
         {profile?.location && (
           <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground mt-1">
