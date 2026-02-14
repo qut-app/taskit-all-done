@@ -138,7 +138,7 @@ export function useJobs() {
     return { error };
   };
 
-  const applyToJob = async (jobId: string, message?: string) => {
+  const applyToJob = async (jobId: string, message?: string, deliveryTime?: string) => {
     if (!user) return { error: new Error('Not authenticated') };
 
     const { error } = await supabase
@@ -146,7 +146,7 @@ export function useJobs() {
       .insert({
         job_id: jobId,
         provider_id: user.id,
-        message,
+        message: message || null,
       });
 
     if (!error) {
@@ -158,7 +158,7 @@ export function useJobs() {
           title: '📋 New Job Application',
           message: `A Service Provider has applied to your job "${job.title}".`,
           type: 'job_application',
-          metadata: { job_id: jobId, provider_id: user.id },
+          metadata: { job_id: jobId, provider_id: user.id, delivery_time: deliveryTime },
         });
       }
       await fetchJobs();
