@@ -41,12 +41,15 @@ const Feed = () => {
       let image_url: string | undefined;
       if (imageFile) {
         const ext = imageFile.name.split('.').pop();
-        const path = `posts/${user!.id}/${Date.now()}.${ext}`;
+        const path = `${user!.id}/posts/${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage.from('user-media').upload(path, imageFile);
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage.from('user-media').getPublicUrl(path);
-          image_url = publicUrl;
+        if (uploadError) {
+          toast({ title: 'Upload failed', description: 'Could not upload image. Please try again.', variant: 'destructive' });
+          setPosting(false);
+          return;
         }
+        const { data: { publicUrl } } = supabase.storage.from('user-media').getPublicUrl(path);
+        image_url = publicUrl;
       }
       await createPost({ content: newContent.trim() || undefined, image_url });
       setNewContent('');
@@ -61,7 +64,12 @@ const Feed = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Max 5MB', variant: 'destructive' });
+      toast({ title: 'File too large', description: 'Maximum file size is 5MB. Please choose a smaller file.', variant: 'destructive' });
+      return;
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: 'Unsupported file', description: 'Supported formats: JPG, PNG, WEBP, GIF, MP4', variant: 'destructive' });
       return;
     }
     setImageFile(file);
@@ -123,7 +131,7 @@ const Feed = () => {
               )}
               <div className="flex items-center justify-between pt-2 border-t border-border">
                 <div className="flex gap-2">
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" className="hidden" onChange={handleImageSelect} />
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}>
                     <ImageIcon className="w-4 h-4 text-primary" />
                   </Button>

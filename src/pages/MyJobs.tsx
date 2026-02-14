@@ -87,6 +87,94 @@ const MyJobs = () => {
     }
   };
 
+  const [completingJobId, setCompletingJobId] = useState<string | null>(null);
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [completeRating, setCompleteRating] = useState(0);
+  const [completeComment, setCompleteComment] = useState('');
+  const [submittingComplete, setSubmittingComplete] = useState(false);
+
+  const handleMarkComplete = (jobId: string) => {
+    // Find the accepted provider for this job
+    setCompletingJobId(jobId);
+    setCompleteRating(0);
+    setCompleteComment('');
+    setShowCompleteDialog(true);
+  };
+
+  const handleSubmitCompletion = async () => {
+    if (!completingJobId || !user || completeRating === 0) return;
+    setSubmittingComplete(true);
+    try {
+      // Find the accepted application to get provider id
+      const { data: acceptedApps } = await supabase
+        .from('job_applications')
+        .select('provider_id')
+        .eq('job_id', completingJobId)
+        .eq('status', 'accepted')
+        .limit(1);
+
+      const providerId = acceptedApps?.[0]?.provider_id;
+      if (!providerId) {
+        toast({ title: 'Error', description: 'No accepted provider found for this job.', variant: 'destructive' });
+        setSubmittingComplete(false);
+        return;
+      }
+
+      // Update job status to completed
+      const { error: jobError } = await updateJob(completingJobId, { status: 'completed' as any });
+      if (jobError) {
+        toast({ title: 'Error', description: jobError.message, variant: 'destructive' });
+        setSubmittingComplete(false);
+        return;
+      }
+
+      // Create review for the provider
+      const { error: reviewError } = await supabase
+        .from('reviews')
+        .insert({
+          job_id: completingJobId,
+          reviewer_id: user.id,
+          reviewee_id: providerId,
+          overall_rating: completeRating,
+          comment: completeComment || null,
+        });
+
+      if (reviewError) {
+        console.error('Review error:', reviewError);
+      }
+
+      // Update provider rating
+      const { data: allReviews } = await supabase
+        .from('reviews')
+        .select('overall_rating')
+        .eq('reviewee_id', providerId);
+
+      if (allReviews && allReviews.length > 0) {
+        const avg = allReviews.reduce((sum, r) => sum + (r.overall_rating || 0), 0) / allReviews.length;
+        await supabase
+          .from('provider_profiles')
+          .update({ rating: Math.round(avg * 10) / 10, review_count: allReviews.length })
+          .eq('user_id', providerId);
+      }
+
+      // Notify provider
+      await supabase.from('notifications').insert({
+        user_id: providerId,
+        title: '⭐ Job Completed & Reviewed',
+        message: `Your job has been marked as completed with a ${completeRating}-star rating.`,
+        type: 'review',
+        metadata: { job_id: completingJobId },
+      });
+
+      toast({ title: 'Job completed!', description: 'Your review has been submitted.' });
+      setShowCompleteDialog(false);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Something went wrong', variant: 'destructive' });
+    } finally {
+      setSubmittingComplete(false);
+    }
+  };
+
   const handleRateRequester = async () => {
     if (!ratingJobId || !ratingUserId || !user || rating === 0) return;
 
@@ -103,6 +191,20 @@ const MyJobs = () => {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      // Update requester rating
+      const { data: allReviews } = await supabase
+        .from('reviews')
+        .select('overall_rating')
+        .eq('reviewee_id', ratingUserId);
+
+      if (allReviews && allReviews.length > 0) {
+        const avg = allReviews.reduce((sum, r) => sum + (r.overall_rating || 0), 0) / allReviews.length;
+        await supabase
+          .from('profiles')
+          .update({ requester_rating: Math.round(avg * 10) / 10, requester_review_count: allReviews.length })
+          .eq('user_id', ratingUserId);
+      }
+
       toast({ title: 'Rating submitted!' });
       setShowRateDialog(false);
       setRating(0);
@@ -176,6 +278,17 @@ const MyJobs = () => {
                       >
                         <Users className="w-4 h-4" />
                         View Applications
+                      </Button>
+                    )}
+                    {/* Mark as Completed for requesters on in_progress jobs */}
+                    {!isProvider && job.status === 'in_progress' && (
+                      <Button
+                        size="sm"
+                        className="w-full mt-2 gap-1 bg-success hover:bg-success/90"
+                        onClick={() => handleMarkComplete(job.id)}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Mark as Completed
                       </Button>
                     )}
                     {/* Providers can rate the requester on completed jobs */}
@@ -369,6 +482,44 @@ const MyJobs = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRateDialog(false)}>Cancel</Button>
             <Button onClick={handleRateRequester} disabled={rating === 0}>Submit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Complete + Rate Dialog */}
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Complete Job & Rate Provider</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">Rate the service provider's work to complete this job.</p>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Rating *</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button key={star} onClick={() => setCompleteRating(star)} className="p-1">
+                    <Star className={`w-8 h-8 transition-colors ${star <= completeRating ? 'fill-warning text-warning' : 'text-muted-foreground'}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Review (optional)</label>
+              <Textarea
+                value={completeComment}
+                onChange={(e) => setCompleteComment(e.target.value)}
+                placeholder="How was the service?"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCompleteDialog(false)}>Cancel</Button>
+            <Button onClick={handleSubmitCompletion} disabled={completeRating === 0 || submittingComplete}>
+              {submittingComplete ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Complete & Submit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

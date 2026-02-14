@@ -130,8 +130,19 @@ const Profile = () => {
     if (!file || !user) return;
 
     setUploadingAvatar(true);
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Max file size is 5MB', variant: 'destructive' });
+      setUploadingAvatar(false);
+      return;
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: 'Invalid file type', description: 'Please use JPG, PNG, WEBP, or GIF', variant: 'destructive' });
+      setUploadingAvatar(false);
+      return;
+    }
     const fileExt = file.name.split('.').pop();
-    const filePath = `avatars/${user.id}/avatar.${fileExt}`;
+    const filePath = `${user.id}/avatars/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('user-media')
