@@ -756,6 +756,7 @@ export type Database = {
           updated_at: string
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
+          wallet_balance: number | null
         }
         Insert: {
           account_type?: string | null
@@ -799,6 +800,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
+          wallet_balance?: number | null
         }
         Update: {
           account_type?: string | null
@@ -842,6 +844,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
+          wallet_balance?: number | null
         }
         Relationships: []
       }
@@ -1178,6 +1181,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          escrow_transaction_id: string | null
+          id: string
+          reference: string | null
+          source: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          reference?: string | null
+          source: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          reference?: string | null
+          source?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_escrow_transaction_id_fkey"
+            columns: ["escrow_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       work_showcases: {
         Row: {
