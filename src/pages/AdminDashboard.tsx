@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedback } from '@/hooks/useFeedback';
 import { FeedbackAnalytics } from '@/components/admin/FeedbackAnalytics';
 import { ModerationTab } from '@/components/admin/ModerationTab';
+import { MarketplaceIntelligence } from '@/components/admin/MarketplaceIntelligence';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -334,7 +335,7 @@ const AdminDashboard = () => {
       {/* Tabs */}
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-4 mb-2 h-auto">
             <TabsTrigger value="verifications" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CheckCircle className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Verify</span>
@@ -351,6 +352,8 @@ const AdminDashboard = () => {
               <Tag className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Tags</span>
             </TabsTrigger>
+          </TabsList>
+          <TabsList className="grid w-full grid-cols-4 mb-4 h-auto">
             <TabsTrigger value="ads" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Megaphone className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Ads</span>
@@ -362,6 +365,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="users" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Users className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="intelligence" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Intel</span>
             </TabsTrigger>
           </TabsList>
 
@@ -992,6 +999,20 @@ const AdminDashboard = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+          {/* Marketplace Intelligence Tab */}
+          <TabsContent value="intelligence">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Marketplace Intelligence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MarketplaceIntelligence />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

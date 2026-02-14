@@ -1,4 +1,4 @@
-import { Home, Search, PlusCircle, Briefcase, User } from 'lucide-react';
+import { Home, Search, Flame, Briefcase, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -8,7 +8,7 @@ const CompanyBottomNavigation = () => {
   const items = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Discover', path: '/discover' },
-    { icon: PlusCircle, label: 'Post Job', path: '/post-job' },
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];

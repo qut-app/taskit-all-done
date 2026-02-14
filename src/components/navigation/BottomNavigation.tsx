@@ -1,4 +1,4 @@
-import { Home, Search, PlusCircle, Briefcase, User } from 'lucide-react';
+import { Home, Search, PlusCircle, Briefcase, User, Flame } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
@@ -10,7 +10,7 @@ const BottomNavigation = () => {
   const requesterItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Discover', path: '/discover' },
-    { icon: PlusCircle, label: 'Post Job', path: '/post-job' },
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
@@ -18,6 +18,7 @@ const BottomNavigation = () => {
   const providerItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Find Jobs', path: '/find-jobs' },
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];

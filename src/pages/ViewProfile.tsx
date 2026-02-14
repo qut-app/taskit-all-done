@@ -12,6 +12,7 @@ import { useProvider } from '@/hooks/useProviders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { trackEvent } from '@/hooks/useAnalytics';
 
 const ViewProfile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -25,6 +26,7 @@ const ViewProfile = () => {
 
   useEffect(() => {
     if (!userId) return;
+    trackEvent('profile_view', { target_id: userId });
     supabase
       .from('reviews')
       .select('*')
