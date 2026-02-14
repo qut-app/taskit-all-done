@@ -13,8 +13,14 @@ serve(async (req) => {
   try {
     const { amount, email, reference, subscription_type } = await req.json();
 
-    if (!amount || !email || !reference) {
-      throw new Error("Missing required parameters: amount, email, reference");
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      throw new Error("Invalid amount");
+    }
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      throw new Error("Invalid email address");
+    }
+    if (!reference || typeof reference !== 'string') {
+      throw new Error("Invalid reference");
     }
 
     const paystackSecretKey = Deno.env.get("PAYSTACK_SECRET_KEY");
@@ -35,6 +41,7 @@ serve(async (req) => {
         amount, // already in kobo
         email,
         reference,
+        currency: "NGN",
         metadata: {
           subscription_type,
         },

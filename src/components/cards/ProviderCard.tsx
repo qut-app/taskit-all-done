@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Star, MapPin, Clock, Building2 } from 'lucide-react';
+import { Star, MapPin, Clock, Building2, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,10 @@ interface ProviderCardProps {
   provider: ProviderWithProfile;
   onView?: () => void;
   onHire?: () => void;
+  hiringState?: 'idle' | 'loading' | 'sent';
 }
 
-const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
+const ProviderCard = ({ provider, onView, onHire, hiringState = 'idle' }: ProviderCardProps) => {
   const profile = provider.profile;
   const isCompany = profile?.account_type === 'company';
   const displayName = isCompany ? profile?.company_name : profile?.full_name;
@@ -60,15 +61,6 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
                 displayName?.charAt(0) || 'P'
               )}
             </motion.div>
-            {profile?.verification_status === 'verified' && (
-              <div className="absolute -top-1 -right-1">
-                <VerificationBadge 
-                  status="verified" 
-                  accountType={isCompany ? 'company' : 'individual'}
-                  size="sm"
-                />
-              </div>
-            )}
             <OnlineIndicator
               isOnline={profile?.is_online}
               lastSeenAt={profile?.last_seen_at}
@@ -85,6 +77,11 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
                   <h3 className="font-semibold text-foreground truncate">
                     {displayName || 'Provider'}
                   </h3>
+                  <VerificationBadge 
+                    status={profile?.verification_status || 'unverified'} 
+                    accountType={isCompany ? 'company' : 'individual'}
+                    size="sm"
+                  />
                   {isCompany && (
                     <Badge variant="outline" className="text-xs shrink-0">
                       Business
@@ -137,8 +134,21 @@ const ProviderCard = ({ provider, onView, onHire }: ProviderCardProps) => {
           <Button variant="outline" className="flex-1" onClick={onView}>
             View Profile
           </Button>
-          <Button className="flex-1" onClick={onHire}>
-            Hire Now
+          <Button
+            className="flex-1"
+            onClick={onHire}
+            disabled={hiringState !== 'idle'}
+          >
+            {hiringState === 'loading' ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Hiring...
+              </span>
+            ) : hiringState === 'sent' ? (
+              '✅ Request Sent'
+            ) : (
+              'Hire Now'
+            )}
           </Button>
         </div>
       </Card>

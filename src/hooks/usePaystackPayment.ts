@@ -45,12 +45,23 @@ export function usePaystackPayment() {
       return;
     }
 
+    // Client-side validation
+    if (!amount || amount <= 0) {
+      toast({ title: 'Error', description: 'Invalid payment amount', variant: 'destructive' });
+      return;
+    }
+
+    if (!subscriptionType) {
+      toast({ title: 'Error', description: 'Please select a subscription plan', variant: 'destructive' });
+      return;
+    }
+
     setLoading(true);
     try {
       await loadPaystackScript();
 
       const reference = generateReference();
-      const amountInKobo = amount * 100;
+      const amountInKobo = Math.round(amount * 100);
 
       // Initialize transaction server-side
       const { data, error } = await supabase.functions.invoke('initialize-subscription', {
@@ -62,15 +73,21 @@ export function usePaystackPayment() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error('Unable to initialize payment. Please try again.');
+      }
 
       const accessCode = data?.access_code;
-      if (!accessCode) throw new Error('No access code received');
+      const publicKey = data?.public_key;
+
+      if (!accessCode || !publicKey) {
+        throw new Error('Payment setup incomplete. Please try again later.');
+      }
 
       // Open Paystack popup - do NOT pass amount when using access_code
       const popup = new window.PaystackPop();
       popup.newTransaction({
-        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || data?.public_key,
+        key: publicKey,
         access_code: accessCode,
         email: user.email,
         ref: reference,
@@ -85,7 +102,11 @@ export function usePaystackPayment() {
       });
     } catch (err: any) {
       console.error('Payment error:', err);
-      toast({ title: 'Payment Error', description: err.message || 'Failed to initialize payment', variant: 'destructive' });
+      // Show user-friendly error, never raw Paystack errors
+      const message = err.message?.includes('Paystack') || err.message?.includes('invalid')
+        ? 'Unable to process payment. Please check your details and try again.'
+        : err.message || 'Failed to initialize payment';
+      toast({ title: 'Payment Error', description: message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }

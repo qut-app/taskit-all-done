@@ -57,6 +57,7 @@ const Profile = () => {
     company_name: '',
     company_address: '',
     service_description: '',
+    gender: '',
   });
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -91,6 +92,7 @@ const Profile = () => {
       company_name: profile?.company_name || '',
       company_address: profile?.company_address || '',
       service_description: providerProfile?.service_description || '',
+      gender: profile?.gender || '',
     });
     setIsEditing(true);
   };
@@ -102,6 +104,9 @@ const Profile = () => {
       phone: editForm.phone,
       location: editForm.location,
     };
+    if (!isCompany && editForm.gender) {
+      profileUpdates.gender = editForm.gender;
+    }
     if (profile?.account_type === 'company') {
       profileUpdates.company_name = editForm.company_name;
       profileUpdates.company_address = editForm.company_address;
@@ -224,12 +229,7 @@ const Profile = () => {
                   {isCompany ? <Building2 className="w-8 h-8" /> : displayName?.charAt(0) || 'U'}
                 </div>
               )}
-              {/* Verified badge - top right, never overlapping camera */}
-              {profile.verification_status === 'verified' && (
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-success rounded-full flex items-center justify-center z-10">
-                  <CheckCircle className="w-4 h-4 text-success-foreground" />
-                </div>
-              )}
+              {/* Verified badge removed from avatar to prevent overlap */}
               {/* Camera icon - bottom right */}
               <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center cursor-pointer shadow-lg z-10">
                 {uploadingAvatar ? (
@@ -294,6 +294,24 @@ const Profile = () => {
                 <label className="text-xs font-medium text-muted-foreground">Location</label>
                 <Input value={editForm.location} onChange={(e) => setEditForm(prev => ({ ...prev, location: e.target.value }))} placeholder="Your location" />
               </div>
+              {!isCompany && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Gender</label>
+                  <div className="flex gap-2 mt-1">
+                    {(['Male', 'Female'] as const).map(g => (
+                      <Button
+                        key={g}
+                        type="button"
+                        variant={editForm.gender === g ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setEditForm(prev => ({ ...prev, gender: g }))}
+                      >
+                        {g}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {isCompany && (
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Company Address</label>
