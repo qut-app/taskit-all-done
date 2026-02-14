@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
   Edit3, Camera, Loader2, LogOut, Heart, Users, Megaphone, CreditCard,
-  HelpCircle, Bell, Shield, Copy, Share2, Trash2
+  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -358,6 +358,7 @@ const Profile = () => {
               <TabsTrigger value="foryou" className="text-xs">For You</TabsTrigger>
               <TabsTrigger value="favourites" className="text-xs">Favorites</TabsTrigger>
               <TabsTrigger value="referrals" className="text-xs">Referrals</TabsTrigger>
+              <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
               <TabsTrigger value="payments" className="text-xs">Payments</TabsTrigger>
               <TabsTrigger value="alerts" className="text-xs">
                 Alerts
@@ -604,6 +605,11 @@ const Profile = () => {
             </Card>
           </TabsContent>
 
+          {/* ===== WALLET TAB ===== */}
+          <TabsContent value="wallet" className="space-y-4">
+            <WalletSection userId={user?.id} walletBalance={profile?.wallet_balance} />
+          </TabsContent>
+
           {/* ===== PAYMENTS TAB ===== */}
           <TabsContent value="payments" className="space-y-4">
             <h3 className="font-semibold text-foreground">Subscription Plans</h3>
@@ -805,6 +811,93 @@ const Profile = () => {
         </Tabs>
       </div>
     </Layout>
+  );
+};
+
+// Wallet Section Component
+const WalletSection = ({ userId, walletBalance }: { userId?: string; walletBalance?: number | null }) => {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        setTransactions(data || []);
+        setLoading(false);
+      });
+  }, [userId]);
+
+  const formatAmount = (amount: number) =>
+    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
+
+  const sourceLabels: Record<string, string> = {
+    escrow_release: 'Escrow Release',
+    escrow_hold: 'Escrow Hold',
+    refund: 'Refund',
+    withdrawal: 'Withdrawal',
+    commission: 'Platform Commission',
+  };
+
+  return (
+    <>
+      {/* Balance Card */}
+      <Card className="p-5 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+        <div className="flex items-center gap-3 mb-1">
+          <Wallet className="w-5 h-5 text-primary" />
+          <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
+        </div>
+        <p className="text-3xl font-bold text-foreground">{formatAmount(walletBalance || 0)}</p>
+      </Card>
+
+      {/* Transaction History */}
+      <h4 className="font-semibold text-foreground text-sm">Transaction History</h4>
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : transactions.length === 0 ? (
+        <Card className="p-8 text-center">
+          <CreditCard className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No transactions yet</p>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {transactions.map((tx) => (
+            <Card key={tx.id} className="p-3 flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                tx.type === 'credit' ? 'bg-emerald-500/10' : 'bg-destructive/10'
+              }`}>
+                {tx.type === 'credit' ? (
+                  <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
+                ) : (
+                  <ArrowUpRight className="w-4 h-4 text-destructive" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {sourceLabels[tx.source] || tx.source}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                </p>
+              </div>
+              <p className={`text-sm font-semibold shrink-0 ${
+                tx.type === 'credit' ? 'text-emerald-500' : 'text-destructive'
+              }`}>
+                {tx.type === 'credit' ? '+' : '-'}{formatAmount(tx.amount)}
+              </p>
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
   );
 };
 
