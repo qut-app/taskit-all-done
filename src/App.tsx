@@ -20,6 +20,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import CompanyDashboard from "./pages/CompanyDashboard";
 import ViewProfile from "./pages/ViewProfile";
+import Feed from "./pages/Feed";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/post-job" element={<PostJob />} />
                 <Route path="/my-jobs" element={<MyJobs />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/feed" element={<Feed />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
