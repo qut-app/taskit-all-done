@@ -125,8 +125,8 @@ const FindJobs = () => {
   const handleBargain = async () => {
     if (!bargainJob || !user || !bargainAmount) return;
     const wordCount = bargainReason.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount > 70) {
-      toast({ title: 'Too many words', description: 'Reason must be 70 words or less.', variant: 'destructive' });
+    if (wordCount !== 70) {
+      toast({ title: 'Exactly 70 words required', description: `Your reason has ${wordCount} words. It must be exactly 70 words.`, variant: 'destructive' });
       return;
     }
     setSubmittingBargain(true);
@@ -392,17 +392,12 @@ const FindJobs = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">
-                  Reason <span className="text-muted-foreground text-xs">(max 70 words)</span>
+                  Reason <span className="text-muted-foreground text-xs">(exactly 70 words required)</span>
                 </label>
                 <Textarea
                   placeholder="Why should the price change?"
                   value={bargainReason}
-                  onChange={(e) => {
-                    const words = e.target.value.trim().split(/\s+/).filter(Boolean);
-                    if (words.length <= 70) {
-                      setBargainReason(e.target.value);
-                    }
-                  }}
+                  onChange={(e) => setBargainReason(e.target.value)}
                   rows={3}
                 />
                 <p className="text-xs text-muted-foreground mt-1">

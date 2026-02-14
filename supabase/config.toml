@@ -1,1 +1,7 @@
 project_id = "skatfezzcsyxedlocxfn"
+
+[functions.paystack-webhook]
+verify_jwt = false
+
+[functions.release-escrow]
+verify_jwt = false
