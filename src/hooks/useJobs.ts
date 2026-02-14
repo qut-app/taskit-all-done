@@ -21,7 +21,7 @@ export function useJobs() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      // Fetch all open jobs
+      // Fetch all open jobs only (accepted/in_progress jobs are hidden from discovery)
       const { data: jobsData } = await supabase
         .from('jobs')
         .select('*')
