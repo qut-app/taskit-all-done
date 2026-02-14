@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Star, Clock, Shield, Loader2, Heart } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Clock, Shield, Loader2, Heart, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import { OnlineIndicator } from '@/components/ui/OnlineIndicator';
+import { ReportUserDialog } from '@/components/ReportUserDialog';
 import { useProvider } from '@/hooks/useProviders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +21,7 @@ const ViewProfile = () => {
   const { toast } = useToast();
   const [hiringState, setHiringState] = useState<'idle' | 'loading' | 'sent'>('idle');
   const [reviews, setReviews] = useState<any[]>([]);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -107,8 +109,22 @@ const ViewProfile = () => {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="font-semibold text-lg">Provider Profile</h1>
+        <h1 className="font-semibold text-lg flex-1">Provider Profile</h1>
+        {user && user.id !== userId && (
+          <Button variant="ghost" size="icon" onClick={() => setReportOpen(true)} className="text-muted-foreground hover:text-destructive">
+            <Flag className="w-5 h-5" />
+          </Button>
+        )}
       </header>
+
+      {userId && (
+        <ReportUserDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          reportedUserId={userId}
+          reportedUserName={displayName || undefined}
+        />
+      )}
 
       {/* Profile Header */}
       <div className="p-6 text-center">

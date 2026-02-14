@@ -891,6 +891,36 @@ export type Database = {
           },
         ]
       }
+      role_switch_logs: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          id: string
+          ip_address: string | null
+          new_role: string
+          previous_role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          new_role: string
+          previous_role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          ip_address?: string | null
+          new_role?: string
+          previous_role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       service_categories: {
         Row: {
           created_at: string

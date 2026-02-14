@@ -66,10 +66,21 @@ const Profile = () => {
     navigate('/');
   };
 
+  const { roleSwitchCooldown, isActionRestricted } = useApp();
+
   const handleSwitchRole = async () => {
     const newRole = currentRole === 'requester' ? 'provider' : 'requester';
-    await switchRole(newRole);
-    toast({ title: 'Role switched', description: `You are now a ${newRole === 'requester' ? 'Job Giver' : 'Service Provider'}` });
+    const result = await switchRole(newRole);
+    if (result.error) {
+      toast({ title: 'Cannot switch role', description: result.error, variant: 'destructive' });
+    } else {
+      toast({ 
+        title: 'Role switched successfully', 
+        description: isActionRestricted 
+          ? 'Some actions are temporarily limited for security.' 
+          : `You are now a ${newRole === 'requester' ? 'Job Giver' : 'Service Provider'}` 
+      });
+    }
   };
 
   const startEditing = () => {
@@ -338,7 +349,10 @@ const Profile = () => {
           <TabsContent value="profile" className="space-y-4">
             {/* Role Switch (individuals only) */}
             {!isCompany && (
-              <Card className="p-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleSwitchRole}>
+              <Card 
+                className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${roleSwitchCooldown > 0 ? 'opacity-60' : ''}`} 
+                onClick={handleSwitchRole}
+              >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
                     <RefreshCw className="w-6 h-6 text-secondary" />
@@ -346,6 +360,11 @@ const Profile = () => {
                   <div className="flex-1">
                     <h3 className="font-semibold text-foreground">Switch Role</h3>
                     <p className="text-sm text-muted-foreground">Currently: {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}</p>
+                    {roleSwitchCooldown > 0 && (
+                      <p className="text-xs text-warning mt-1">
+                        ⏱ Cooldown: {Math.floor(roleSwitchCooldown / 3600)}h {Math.floor((roleSwitchCooldown % 3600) / 60)}m remaining
+                      </p>
+                    )}
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>

@@ -21,7 +21,8 @@ import {
   Eye,
   FileText,
   BadgeCheck,
-  BarChart3
+  BarChart3,
+  Flag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminFeedback } from '@/hooks/useFeedback';
 import { FeedbackAnalytics } from '@/components/admin/FeedbackAnalytics';
+import { ModerationTab } from '@/components/admin/ModerationTab';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -332,10 +334,14 @@ const AdminDashboard = () => {
       {/* Tabs */}
       <div className="px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-7 mb-4 h-auto">
             <TabsTrigger value="verifications" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CheckCircle className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Verify</span>
+            </TabsTrigger>
+            <TabsTrigger value="moderation" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Flag className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Reports</span>
             </TabsTrigger>
             <TabsTrigger value="showcases" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Image className="w-4 h-4 sm:mr-1" />
@@ -476,6 +482,11 @@ const AdminDashboard = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Moderation Tab */}
+          <TabsContent value="moderation">
+            <ModerationTab users={users} />
           </TabsContent>
 
           {/* Showcases Tab */}
