@@ -817,22 +817,85 @@ const Profile = () => {
 // Wallet Section Component
 const WalletSection = ({ userId, walletBalance }: { userId?: string; walletBalance?: number | null }) => {
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
+  const fetchData = () => {
     if (!userId) return;
     setLoading(true);
-    supabase
-      .from('wallet_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setTransactions(data || []);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]).then(([txRes, wdRes]) => {
+      setTransactions(txRes.data || []);
+      setWithdrawals(wdRes.data || []);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [userId]);
+
+  const handleWithdraw = async () => {
+    if (!userId) return;
+    const amount = Number(withdrawAmount);
+    if (!amount || amount <= 0) {
+      toast({ title: 'Invalid amount', description: 'Enter a valid withdrawal amount.', variant: 'destructive' });
+      return;
+    }
+    if (amount > (walletBalance || 0)) {
+      toast({ title: 'Insufficient balance', description: 'You cannot withdraw more than your wallet balance.', variant: 'destructive' });
+      return;
+    }
+    if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
+      toast({ title: 'Missing details', description: 'Please fill in all bank details.', variant: 'destructive' });
+      return;
+    }
+    if (accountNumber.trim().length < 10) {
+      toast({ title: 'Invalid account number', description: 'Account number must be at least 10 digits.', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(true);
+    const { error } = await supabase.from('withdrawal_requests').insert({
+      user_id: userId,
+      amount,
+      bank_name: bankName.trim(),
+      account_number: accountNumber.trim(),
+      account_name: accountName.trim(),
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to submit withdrawal request. Please try again.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Request submitted!', description: 'Your withdrawal request is being reviewed.' });
+      setShowWithdrawForm(false);
+      setWithdrawAmount('');
+      setBankName('');
+      setAccountNumber('');
+      setAccountName('');
+      fetchData();
+    }
+    setSubmitting(false);
+  };
 
   const formatAmount = (amount: number) =>
     new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
@@ -845,6 +908,15 @@ const WalletSection = ({ userId, walletBalance }: { userId?: string; walletBalan
     commission: 'Platform Commission',
   };
 
+  const statusStyles: Record<string, string> = {
+    pending: 'bg-warning/10 text-warning',
+    approved: 'bg-primary/10 text-primary',
+    processed: 'bg-emerald-500/10 text-emerald-600',
+    rejected: 'bg-destructive/10 text-destructive',
+  };
+
+  const hasPendingWithdrawal = withdrawals.some(w => w.status === 'pending');
+
   return (
     <>
       {/* Balance Card */}
@@ -854,7 +926,96 @@ const WalletSection = ({ userId, walletBalance }: { userId?: string; walletBalan
           <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
         </div>
         <p className="text-3xl font-bold text-foreground">{formatAmount(walletBalance || 0)}</p>
+        <Button
+          className="mt-3 w-full gap-2"
+          size="sm"
+          disabled={(walletBalance || 0) <= 0 || hasPendingWithdrawal}
+          onClick={() => setShowWithdrawForm(true)}
+        >
+          <ArrowUpRight className="w-4 h-4" />
+          {hasPendingWithdrawal ? 'Withdrawal Pending...' : 'Request Withdrawal'}
+        </Button>
       </Card>
+
+      {/* Withdrawal Form */}
+      {showWithdrawForm && (
+        <Card className="p-4 space-y-3 border-primary/20">
+          <h4 className="font-semibold text-foreground text-sm flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-primary" />
+            Withdrawal Details
+          </h4>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Amount (₦)</label>
+            <Input
+              type="number"
+              placeholder="Enter amount"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Available: {formatAmount(walletBalance || 0)}</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Bank Name</label>
+            <Input
+              placeholder="e.g. Access Bank"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Account Number</label>
+            <Input
+              placeholder="10-digit account number"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              maxLength={10}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Account Name</label>
+            <Input
+              placeholder="Account holder name"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowWithdrawForm(false)}>Cancel</Button>
+            <Button size="sm" className="flex-1" disabled={submitting} onClick={handleWithdraw}>
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Submit Request
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Withdrawal Requests */}
+      {withdrawals.length > 0 && (
+        <>
+          <h4 className="font-semibold text-foreground text-sm">Withdrawal Requests</h4>
+          <div className="space-y-2">
+            {withdrawals.map((wd) => (
+              <Card key={wd.id} className="p-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{wd.bank_name} • {wd.account_number}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${statusStyles[wd.status] || ''}`}>
+                      {wd.status.charAt(0).toUpperCase() + wd.status.slice(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(wd.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-foreground shrink-0">{formatAmount(wd.amount)}</p>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Transaction History */}
       <h4 className="font-semibold text-foreground text-sm">Transaction History</h4>
