@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Wifi, Map, Loader2, MapPin, Building2, User, 
-  Clock, DollarSign, X, Scale, Send
+  Clock, DollarSign, X, Scale, Send, Plus, Trash2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import MobileLayout from '@/components/navigation/MobileLayout';
 import JobCard from '@/components/cards/JobCard';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,6 +28,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+interface PricingPlan {
+  plan_type: string;
+  price: string;
+  description: string;
+  delivery_time: string;
+  delivery_unit: 'hours' | 'days';
+}
+
+const EMPTY_PLAN: PricingPlan = { plan_type: '', price: '', description: '', delivery_time: '', delivery_unit: 'days' };
+
 const FindJobs = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -43,6 +54,18 @@ const FindJobs = () => {
   const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'individual' | 'company'>('all');
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
   const [viewingJob, setViewingJob] = useState<any | null>(null);
+
+  // Apply with plans state (remote jobs)
+  const [applyJob, setApplyJob] = useState<any | null>(null);
+  const [applyMessage, setApplyMessage] = useState('');
+  const [applyDeliveryTime, setApplyDeliveryTime] = useState('');
+  const [applyDeliveryUnit, setApplyDeliveryUnit] = useState<'hours' | 'days'>('days');
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([
+    { plan_type: 'basic', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+    { plan_type: 'standard', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+    { plan_type: 'gold', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+  ]);
+  const [submittingApply, setSubmittingApply] = useState(false);
 
   // Bargain state
   const [bargainJob, setBargainJob] = useState<any | null>(null);
@@ -85,41 +108,122 @@ const FindJobs = () => {
   }, [user, authLoading, navigate]);
 
   const filteredJobs = jobs.filter((job) => {
-    // Hide jobs that are not open
     if (job.status !== 'open') return false;
-
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (job.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategory || job.category === selectedCategory;
     const matchesMode = serviceMode === 'all' || job.service_mode === serviceMode || job.service_mode === 'both';
-    
-    // Location filter
     if (locationFilter) {
       const jobLoc = job.location?.toLowerCase() || '';
       if (!jobLoc.includes(locationFilter.toLowerCase())) return false;
     }
-
-    // Account type filter
     if (accountTypeFilter !== 'all') {
       if ((job.requester_profile as any)?.account_type !== accountTypeFilter) return false;
     }
-    
     return matchesSearch && matchesCategory && matchesMode;
   });
 
-  const handleApply = async (jobId: string) => {
+  const handleApplyClick = (job: any) => {
+    if (appliedJobIds.has(job.id)) {
+      toast({ title: 'Already applied', description: 'You have already applied to this job.', variant: 'destructive' });
+      return;
+    }
+    // Remote jobs: show pricing plan modal
+    if (job.service_mode === 'online' || job.service_mode === 'both') {
+      setApplyJob(job);
+      setApplyMessage('');
+      setApplyDeliveryTime('');
+      setApplyDeliveryUnit('days');
+      setPricingPlans([
+        { plan_type: 'basic', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+        { plan_type: 'standard', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+        { plan_type: 'gold', price: '', description: '', delivery_time: '', delivery_unit: 'days' },
+      ]);
+    } else {
+      // Onsite jobs: show simple apply modal
+      setApplyJob(job);
+      setApplyMessage('');
+      setApplyDeliveryTime('');
+      setApplyDeliveryUnit('days');
+      setPricingPlans([]);
+    }
+  };
+
+  const handleSubmitApplication = async () => {
+    if (!applyJob || !user) return;
+    setSubmittingApply(true);
+
+    try {
+      const isRemote = applyJob.service_mode === 'online' || applyJob.service_mode === 'both';
+      
+      // Validate pricing plans for remote jobs
+      if (isRemote) {
+        const filledPlans = pricingPlans.filter(p => p.price && p.description);
+        if (filledPlans.length === 0) {
+          toast({ title: 'Add at least one plan', description: 'Remote jobs require at least one pricing plan.', variant: 'destructive' });
+          setSubmittingApply(false);
+          return;
+        }
+      }
+
+      const deliveryTimeStr = applyDeliveryTime 
+        ? `${applyDeliveryTime} ${applyDeliveryUnit}` 
+        : undefined;
+
+      // Submit application
+      const { error } = await applyToJob(applyJob.id, applyMessage || undefined, deliveryTimeStr);
+      if (error) throw error;
+
+      // Create pricing plans for remote jobs
+      if (isRemote) {
+        // Get the application we just created
+        const { data: appData } = await supabase
+          .from('job_applications')
+          .select('id')
+          .eq('job_id', applyJob.id)
+          .eq('provider_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (appData && appData[0]) {
+          const filledPlans = pricingPlans.filter(p => p.price && p.description);
+          const planInserts = filledPlans.map(p => ({
+            application_id: appData[0].id,
+            plan_type: p.plan_type,
+            price: Number(p.price),
+            description: p.description,
+            delivery_time: p.delivery_time ? `${p.delivery_time} ${p.delivery_unit}` : applyJob.expected_delivery_time,
+          }));
+
+          if (planInserts.length > 0) {
+            await supabase.from('pricing_plans').insert(planInserts);
+          }
+        }
+      }
+
+      toast({ title: 'Applied!', description: 'Your application has been submitted.' });
+      setApplyJob(null);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to apply', variant: 'destructive' });
+    } finally {
+      setSubmittingApply(false);
+    }
+  };
+
+  const handleQuickApply = async (jobId: string) => {
     if (appliedJobIds.has(jobId)) {
       toast({ title: 'Already applied', description: 'You have already applied to this job.', variant: 'destructive' });
       return;
     }
-    setApplyingJobId(jobId);
-    const { error } = await applyToJob(jobId);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Applied!', description: 'Your application has been submitted.' });
+    // Find the job to check service_mode
+    const job = filteredJobs.find(j => j.id === jobId);
+    if (job) {
+      handleApplyClick(job);
     }
-    setApplyingJobId(null);
+  };
+
+  const updatePlan = (index: number, field: keyof PricingPlan, value: string) => {
+    setPricingPlans(prev => prev.map((p, i) => i === index ? { ...p, [field]: value } : p));
   };
 
   const handleBargain = async () => {
@@ -131,10 +235,9 @@ const FindJobs = () => {
     }
     setSubmittingBargain(true);
     try {
-      // Create a negotiation record
       const { error } = await supabase.from('negotiations').insert({
         job_id: bargainJob.id,
-        application_id: bargainJob.id, // placeholder - will be linked if application exists
+        application_id: bargainJob.id,
         initiator_id: user.id,
         responder_id: bargainJob.requester_id,
         original_price: Number(bargainJob.budget) || 0,
@@ -142,10 +245,8 @@ const FindJobs = () => {
         message: bargainReason || null,
         status: 'pending',
       });
-      
       if (error) throw error;
 
-      // Notify the job giver
       await supabase.from('notifications').insert({
         user_id: bargainJob.requester_id,
         title: '⚖️ New Price Negotiation',
@@ -209,11 +310,8 @@ const FindJobs = () => {
             size="sm"
             className="gap-1"
             onClick={() => {
-              if (locationFilter) {
-                setLocationFilter(null);
-              } else {
-                setLocationFilter(geo.locationName || profile?.location || '');
-              }
+              if (locationFilter) setLocationFilter(null);
+              else setLocationFilter(geo.locationName || profile?.location || '');
             }}
           >
             <MapPin className="w-3.5 h-3.5" />
@@ -282,7 +380,7 @@ const FindJobs = () => {
               >
                 <JobCard
                   job={job}
-                  onApply={() => handleApply(job.id)}
+                  onApply={() => handleQuickApply(job.id)}
                   onView={() => setViewingJob(job)}
                   applicationStatus={isApplied ? 'applied' : isApplying ? 'applying' : undefined}
                   onBargain={hasSubscription ? () => setBargainJob(job) : undefined}
@@ -316,38 +414,32 @@ const FindJobs = () => {
                   {viewingJob.service_mode === 'online' ? 'Remote' : viewingJob.service_mode === 'offline' ? 'On-site' : 'Remote/On-site'}
                 </Badge>
               </div>
-
               {viewingJob.description && (
                 <div>
                   <h4 className="text-sm font-medium text-foreground mb-1">Description</h4>
                   <p className="text-sm text-muted-foreground">{viewingJob.description}</p>
                 </div>
               )}
-
               {viewingJob.budget && (
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-success" />
                   <span className="font-semibold text-foreground">{formatBudget(Number(viewingJob.budget))}</span>
                 </div>
               )}
-
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Expected delivery: {viewingJob.expected_delivery_time}</span>
               </div>
-
               {viewingJob.location && (
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">{viewingJob.location}</span>
                 </div>
               )}
-
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Posted by: {viewingJob.requester_profile?.full_name || 'Anonymous'}</span>
               </div>
-
               <p className="text-xs text-muted-foreground">
                 Posted {new Date(viewingJob.created_at).toLocaleDateString('en-NG', { dateStyle: 'medium' })}
               </p>
@@ -356,13 +448,124 @@ const FindJobs = () => {
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setViewingJob(null)}>Close</Button>
             {viewingJob && !appliedJobIds.has(viewingJob.id) && (
-              <Button onClick={() => { handleApply(viewingJob.id); setViewingJob(null); }}>
+              <Button onClick={() => { handleApplyClick(viewingJob); setViewingJob(null); }}>
                 Apply Now
               </Button>
             )}
             {viewingJob && appliedJobIds.has(viewingJob.id) && (
               <Button disabled variant="soft">Applied ✓</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Dialog (with pricing plans for remote jobs) */}
+      <Dialog open={!!applyJob} onOpenChange={() => setApplyJob(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Apply to: {applyJob?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {applyJob && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">Message (optional)</label>
+                <Textarea
+                  placeholder="Why are you the best fit for this job?"
+                  value={applyMessage}
+                  onChange={(e) => setApplyMessage(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              {/* Custom delivery time */}
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1 block">
+                  <Clock className="w-3.5 h-3.5 inline mr-1" />
+                  Your Delivery Time
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="e.g. 3"
+                    value={applyDeliveryTime}
+                    onChange={(e) => setApplyDeliveryTime(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Select value={applyDeliveryUnit} onValueChange={(v: 'hours' | 'days') => setApplyDeliveryUnit(v)}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Pricing Plans (remote jobs only) */}
+              {(applyJob.service_mode === 'online' || applyJob.service_mode === 'both') && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-1">
+                    <DollarSign className="w-4 h-4" />
+                    Pricing Plans
+                    <span className="text-xs text-muted-foreground font-normal">(at least 1 required)</span>
+                  </h4>
+
+                  {pricingPlans.map((plan, idx) => (
+                    <Card key={idx} className="p-3 space-y-2 border-border/50">
+                      <div className="flex items-center justify-between">
+                        <Badge variant={idx === 0 ? 'outline' : idx === 1 ? 'soft' : 'default'} className="capitalize">
+                          {plan.plan_type}
+                        </Badge>
+                      </div>
+                      <Input
+                        type="number"
+                        placeholder="Price (₦)"
+                        value={plan.price}
+                        onChange={(e) => updatePlan(idx, 'price', e.target.value)}
+                      />
+                      <Textarea
+                        placeholder="What's included in this plan?"
+                        value={plan.description}
+                        onChange={(e) => updatePlan(idx, 'description', e.target.value)}
+                        rows={2}
+                      />
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Delivery time"
+                          value={plan.delivery_time}
+                          onChange={(e) => updatePlan(idx, 'delivery_time', e.target.value)}
+                          className="flex-1"
+                        />
+                        <Select 
+                          value={plan.delivery_unit} 
+                          onValueChange={(v: 'hours' | 'days') => updatePlan(idx, 'delivery_unit', v)}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hours">Hours</SelectItem>
+                            <SelectItem value="days">Days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApplyJob(null)}>Cancel</Button>
+            <Button onClick={handleSubmitApplication} disabled={submittingApply}>
+              {submittingApply ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}
+              Submit Application
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
