@@ -21,8 +21,10 @@ import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import CompanyUpgrade from "./pages/CompanyUpgrade";
 import ViewProfile from "./pages/ViewProfile";
 import Feed from "./pages/Feed";
+import CompanySubscriptionGate from "./components/company/CompanySubscriptionGate";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +43,8 @@ const App = () => (
                 <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
                 <Route path="/role-select" element={<AuthGuard><RoleSelect /></AuthGuard>} />
                 <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
-                <Route path="/company-dashboard" element={<AuthGuard><CompanyDashboard /></AuthGuard>} />
+                <Route path="/company-dashboard" element={<AuthGuard><CompanySubscriptionGate><CompanyDashboard /></CompanySubscriptionGate></AuthGuard>} />
+                <Route path="/company/upgrade" element={<AuthGuard><CompanyUpgrade /></AuthGuard>} />
                 <Route path="/discover" element={<AuthGuard><Discover /></AuthGuard>} />
                 <Route path="/view-profile/:userId" element={<AuthGuard><ViewProfile /></AuthGuard>} />
                 <Route path="/find-jobs" element={<AuthGuard><FindJobs /></AuthGuard>} />
