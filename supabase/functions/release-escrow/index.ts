@@ -69,61 +69,25 @@ serve(async (req) => {
       throw new Error("Escrow is not in held status");
     }
 
-    const now = new Date().toISOString();
-
-    // Update escrow to released
-    await supabase
-      .from("escrow_transactions")
-      .update({ status: "released", released_at: now })
-      .eq("id", escrow.id);
-
-    // Credit provider wallet (provider_earnings)
-    await supabase.from("wallet_transactions").insert({
-      user_id: escrow.payee_id,
-      type: "credit",
-      source: "escrow_release",
-      amount: escrow.provider_earnings,
-      reference: escrow.paystack_reference,
-      escrow_transaction_id: escrow.id,
-    });
-
-    // Log commission transaction
-    if (escrow.platform_commission > 0) {
-      await supabase.from("wallet_transactions").insert({
-        user_id: escrow.payee_id,
-        type: "debit",
-        source: "commission",
-        amount: escrow.platform_commission,
-        reference: `commission_${escrow.paystack_reference}`,
-        escrow_transaction_id: escrow.id,
-      });
+    // Check 24-hour release delay
+    if (escrow.release_eligible_at && new Date(escrow.release_eligible_at) > new Date()) {
+      throw new Error("Release not yet eligible (24-hour fraud protection delay)");
     }
 
-    // Update provider wallet balance
-    await supabase.rpc("increment_wallet_balance", {
-      _user_id: escrow.payee_id,
-      _amount: escrow.provider_earnings,
-    }).then(({ error }) => {
-      // If the RPC doesn't exist yet, do a manual update
-      if (error) {
-        return supabase
-          .from("profiles")
-          .update({ wallet_balance: escrow.provider_earnings })
-          .eq("user_id", escrow.payee_id);
-      }
-    });
+    // Use the secure database function for atomic release
+    const { data: result, error: rpcError } = await supabase
+      .rpc("process_escrow_release", { _escrow_id: escrow_id });
 
-    // Notify provider
-    await supabase.from("notifications").insert({
-      user_id: escrow.payee_id,
-      title: "💸 Payment Released",
-      message: `₦${escrow.provider_earnings.toLocaleString()} has been released to your wallet.`,
-      type: "escrow",
-      metadata: { escrow_id: escrow.id, amount: escrow.provider_earnings },
-    });
+    if (rpcError) {
+      throw new Error(rpcError.message);
+    }
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
 
     return new Response(
-      JSON.stringify({ success: true, provider_earnings: escrow.provider_earnings }),
+      JSON.stringify({ success: true, provider_payout: result.provider_payout, commission: result.commission }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
