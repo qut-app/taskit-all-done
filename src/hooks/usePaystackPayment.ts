@@ -21,8 +21,8 @@ export function usePaystackPayment() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const generateReference = () => {
-    return `txn_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const generateReference = (userId: string) => {
+    return `sub_${userId}_${Date.now()}`;
   };
 
   const loadPaystackScript = (): Promise<void> => {
@@ -40,13 +40,14 @@ export function usePaystackPayment() {
   };
 
   const initializePayment = async ({ amount, subscriptionType, onSuccess, onCancel }: PaystackPaymentOptions) => {
-    if (!user?.email) {
+    if (!user?.email || typeof user.email !== 'string') {
       toast({ title: 'Error', description: 'Please log in to subscribe', variant: 'destructive' });
       return;
     }
 
-    // Client-side validation
-    if (!amount || amount <= 0) {
+    // Validate amount is a real positive number
+    const numericAmount = Number(amount);
+    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
       toast({ title: 'Error', description: 'Invalid payment amount', variant: 'destructive' });
       return;
     }
@@ -60,8 +61,10 @@ export function usePaystackPayment() {
     try {
       await loadPaystackScript();
 
-      const reference = generateReference();
-      const amountInKobo = Math.round(amount * 100);
+      const reference = generateReference(user.id);
+      const amountInKobo = Math.round(numericAmount * 100);
+
+      console.log('Paystack payload:', { email: user.email, amount: amountInKobo, currency: 'NGN', reference, metadata: { subscription_type: subscriptionType } });
 
       // Initialize transaction server-side
       const { data, error } = await supabase.functions.invoke('initialize-subscription', {
