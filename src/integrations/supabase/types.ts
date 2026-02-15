@@ -158,6 +158,7 @@ export type Database = {
           platform_commission: number
           pricing_plan_id: string | null
           provider_earnings: number
+          release_eligible_at: string | null
           released_at: string | null
           status: string
           updated_at: string
@@ -179,6 +180,7 @@ export type Database = {
           platform_commission?: number
           pricing_plan_id?: string | null
           provider_earnings?: number
+          release_eligible_at?: string | null
           released_at?: string | null
           status?: string
           updated_at?: string
@@ -200,6 +202,7 @@ export type Database = {
           platform_commission?: number
           pricing_plan_id?: string | null
           provider_earnings?: number
+          release_eligible_at?: string | null
           released_at?: string | null
           status?: string
           updated_at?: string
@@ -581,6 +584,71 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_revenue: {
+        Row: {
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          escrow_transaction_id: string | null
+          id: string
+          job_id: string
+          month_year: string
+          provider_id: string
+        }
+        Insert: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          job_id: string
+          month_year: string
+          provider_id: string
+        }
+        Update: {
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          job_id?: string
+          month_year?: string
+          provider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_revenue_escrow_transaction_id_fkey"
+            columns: ["escrow_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_revenue_summary: {
+        Row: {
+          id: string
+          month_year: string
+          total_commission: number
+          total_transactions: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          month_year: string
+          total_commission?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          month_year?: string
+          total_commission?: number
+          total_transactions?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1223,6 +1291,36 @@ export type Database = {
           },
         ]
       }
+      wallets: {
+        Row: {
+          available_balance: number
+          created_at: string
+          escrow_balance: number
+          id: string
+          pending_withdrawal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_balance?: number
+          created_at?: string
+          escrow_balance?: number
+          id?: string
+          pending_withdrawal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_balance?: number
+          created_at?: string
+          escrow_balance?: number
+          id?: string
+          pending_withdrawal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           account_name: string
@@ -1346,7 +1444,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      hold_escrow_funds: { Args: { _escrow_id: string }; Returns: Json }
       is_user_verified: { Args: { _user_id: string }; Returns: boolean }
+      process_escrow_release: { Args: { _escrow_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "user"

@@ -73,37 +73,30 @@ serve(async (req) => {
     }
 
     if (escrow) {
-      // Update escrow status to held
-      const { error: updateError } = await supabase
-        .from("escrow_transactions")
-        .update({ status: "held" })
-        .eq("id", escrow.id);
+      // Use atomic database function to hold funds in escrow + update wallets
+      const { data: holdResult, error: holdError } = await supabase
+        .rpc("hold_escrow_funds", { _escrow_id: escrow.id });
 
-      if (updateError) {
-        console.error("Escrow update error:", updateError);
-        throw new Error("Failed to update escrow status");
+      if (holdError) {
+        console.error("Hold escrow error:", holdError);
+        throw new Error("Failed to hold escrow funds");
       }
 
-      // Log wallet transaction for the payer (debit)
-      await supabase.from("wallet_transactions").insert({
-        user_id: escrow.payer_id,
-        type: "debit",
-        source: "escrow_hold",
-        amount: escrow.amount,
-        reference: reference,
-        escrow_transaction_id: escrow.id,
-      });
+      if (holdResult?.error) {
+        console.error("Hold escrow logic error:", holdResult.error);
+        throw new Error(holdResult.error);
+      }
 
       // Notify provider that payment is secured in escrow
       await supabase.from("notifications").insert({
         user_id: escrow.payee_id,
         title: "💰 Payment Secured",
-        message: `Payment of ₦${(escrow.amount / 100).toLocaleString()} has been secured in escrow. Complete the job to receive your payout.`,
+        message: `Payment of ₦${escrow.amount.toLocaleString()} has been secured in escrow. Complete the job to receive your payout.`,
         type: "escrow",
         metadata: { escrow_id: escrow.id, job_id: escrow.job_id },
       });
 
-      console.log(`Escrow ${escrow.id} moved to held status`);
+      console.log(`Escrow ${escrow.id} held with 24-hour release delay`);
     } else {
       // Check if this is a subscription payment
       const subscriptionType = metadata?.subscription_type;
