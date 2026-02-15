@@ -218,6 +218,8 @@ const Onboarding = () => {
         updateData.company_address = formData.companyAddress || null;
       }
 
+      updateData.onboarding_completed = true;
+
       const { error: profileError } = await updateProfile(updateData);
       if (profileError) throw profileError;
 

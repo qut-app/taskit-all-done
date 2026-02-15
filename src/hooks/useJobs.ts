@@ -202,6 +202,17 @@ export function useJobs() {
       .eq('id', jobId);
 
     if (!jobError) {
+      // Atomically deduct slots for both requester and provider
+      try {
+        await supabase.rpc('deduct_slots_on_accept', {
+          _job_id: jobId,
+          _requester_id: user!.id,
+          _provider_id: providerId,
+        });
+      } catch (slotErr) {
+        console.error('Slot deduction error:', slotErr);
+      }
+
       // Notify the accepted provider
       await supabase.from('notifications').insert({
         user_id: providerId,

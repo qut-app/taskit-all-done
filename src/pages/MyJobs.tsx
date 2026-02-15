@@ -187,13 +187,22 @@ const MyJobs = () => {
       amount,
       subscriptionType: `escrow_${selectedPlan.plan_type}`,
       onSuccess: async (ref) => {
-        // Update escrow with reference
+        // Update escrow with Paystack reference
         await supabase
           .from('escrow_transactions')
-          .update({ paystack_reference: ref, status: 'held' })
+          .update({ paystack_reference: ref })
           .eq('id', escrowData.id);
 
-        // Accept the provider
+        // Use RPC to atomically hold escrow funds (wallet debit + ledger entry)
+        const { data: holdResult, error: holdError } = await supabase
+          .rpc('hold_escrow_funds', { _escrow_id: escrowData.id }) as { data: any; error: any };
+
+        if (holdError || holdResult?.error) {
+          console.error('Hold escrow error:', holdError || holdResult?.error);
+          toast({ title: 'Warning', description: 'Payment received but escrow hold failed. Contact support.', variant: 'destructive' });
+        }
+
+        // Accept the provider (with slot deduction)
         await handleAcceptProvider(selectedApp.id, selectedApp.provider_id);
         
         toast({ title: '💰 Payment secured!', description: `₦${providerEarnings.toLocaleString()} will be released to the provider upon completion.` });
