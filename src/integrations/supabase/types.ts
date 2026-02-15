@@ -83,6 +83,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_risk_logs: {
+        Row: {
+          ai_fraud_score: number
+          created_at: string
+          id: string
+          reason_flags: Json
+          risk_level: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_fraud_score?: number
+          created_at?: string
+          id?: string
+          reason_flags?: Json
+          risk_level?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_fraud_score?: number
+          created_at?: string
+          id?: string
+          reason_flags?: Json
+          risk_level?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_risk_logs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analytics_events: {
         Row: {
           category: string | null
@@ -291,6 +329,33 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      fraud_behavior_weights: {
+        Row: {
+          behavior_key: string
+          description: string | null
+          historical_triggers: number
+          id: string
+          last_updated_at: string
+          weight: number
+        }
+        Insert: {
+          behavior_key: string
+          description?: string | null
+          historical_triggers?: number
+          id?: string
+          last_updated_at?: string
+          weight?: number
+        }
+        Update: {
+          behavior_key?: string
+          description?: string | null
+          historical_triggers?: number
+          id?: string
+          last_updated_at?: string
+          weight?: number
         }
         Relationships: []
       }
@@ -784,6 +849,7 @@ export type Database = {
       profiles: {
         Row: {
           account_type: string | null
+          account_under_review: boolean | null
           active_role: string | null
           admin_warning: string | null
           admin_warning_at: string | null
@@ -825,9 +891,11 @@ export type Database = {
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
           wallet_balance: number | null
+          wallet_frozen: boolean | null
         }
         Insert: {
           account_type?: string | null
+          account_under_review?: boolean | null
           active_role?: string | null
           admin_warning?: string | null
           admin_warning_at?: string | null
@@ -869,9 +937,11 @@ export type Database = {
           user_id: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
           wallet_balance?: number | null
+          wallet_frozen?: boolean | null
         }
         Update: {
           account_type?: string | null
+          account_under_review?: boolean | null
           active_role?: string | null
           admin_warning?: string | null
           admin_warning_at?: string | null
@@ -913,6 +983,7 @@ export type Database = {
           user_id?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
           wallet_balance?: number | null
+          wallet_frozen?: boolean | null
         }
         Relationships: []
       }
@@ -1499,6 +1570,10 @@ export type Database = {
     }
     Functions: {
       assess_transaction_risk: { Args: { _escrow_id: string }; Returns: string }
+      calculate_ai_fraud_score: {
+        Args: { _transaction_id?: string; _user_id: string }
+        Returns: Json
+      }
       calculate_trust_score: { Args: { _user_id: string }; Returns: number }
       create_verification_notification: {
         Args: {
