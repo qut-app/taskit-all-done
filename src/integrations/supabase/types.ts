@@ -664,7 +664,10 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          delivery_method: string | null
+          email_sent_at: string | null
           id: string
+          is_email_sent: boolean | null
           is_read: boolean
           message: string
           metadata: Json | null
@@ -674,7 +677,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_method?: string | null
+          email_sent_at?: string | null
           id?: string
+          is_email_sent?: boolean | null
           is_read?: boolean
           message: string
           metadata?: Json | null
@@ -684,7 +690,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_method?: string | null
+          email_sent_at?: string | null
           id?: string
+          is_email_sent?: boolean | null
           is_read?: boolean
           message?: string
           metadata?: Json | null
@@ -908,6 +917,7 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           email: string | null
+          email_notifications_enabled: boolean | null
           face_verification_url: string | null
           full_name: string
           gender: string | null
@@ -930,6 +940,7 @@ export type Database = {
           requester_rating: number | null
           requester_review_count: number | null
           social_media_links: Json | null
+          sound_notifications_enabled: boolean | null
           updated_at: string
           user_id: string
           verification_status: Database["public"]["Enums"]["verification_status"]
@@ -955,6 +966,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean | null
           face_verification_url?: string | null
           full_name: string
           gender?: string | null
@@ -977,6 +989,7 @@ export type Database = {
           requester_rating?: number | null
           requester_review_count?: number | null
           social_media_links?: Json | null
+          sound_notifications_enabled?: boolean | null
           updated_at?: string
           user_id: string
           verification_status?: Database["public"]["Enums"]["verification_status"]
@@ -1002,6 +1015,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          email_notifications_enabled?: boolean | null
           face_verification_url?: string | null
           full_name?: string
           gender?: string | null
@@ -1024,6 +1038,7 @@ export type Database = {
           requester_rating?: number | null
           requester_review_count?: number | null
           social_media_links?: Json | null
+          sound_notifications_enabled?: boolean | null
           updated_at?: string
           user_id?: string
           verification_status?: Database["public"]["Enums"]["verification_status"]

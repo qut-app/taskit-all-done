@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
   Edit3, Camera, Loader2, LogOut, Heart, Users, Megaphone, CreditCard,
-  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Trophy
+  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Trophy, Mail, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,6 +29,8 @@ import { usePaystackPayment } from '@/hooks/usePaystackPayment';
 import { useFeedback } from '@/hooks/useFeedback';
 import { AdManagerTab } from '@/components/profile/AdManagerTab';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
+import { Switch } from '@/components/ui/switch';
+import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -45,6 +47,7 @@ const Profile = () => {
   const { referralLink, referredProviders, referredRequesters, totalRewardsEarned } = useReferrals();
   const { initializePayment, loading: paymentLoading } = usePaystackPayment();
   const { submitFeedback, submitting: feedbackSubmitting, canSubmit: canSubmitFeedback, FEEDBACK_CATEGORIES } = useFeedback();
+  const { soundEnabled, emailEnabled, updatePreference } = useNotificationPreferences();
 
   const [isEditing, setIsEditing] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState('');
@@ -482,6 +485,39 @@ const Profile = () => {
             {isProvider && providerProfile && (
               <WorkShowcaseGallery providerProfileId={providerProfile.id} isOwner={true} />
             )}
+
+            {/* Notification Settings */}
+            <Card className="p-4 space-y-4">
+              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                <Bell className="w-4 h-4" /> Notification Settings
+              </h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Volume2 className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Sound Notifications</p>
+                    <p className="text-xs text-muted-foreground">Play sound on new alerts</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={(v) => updatePreference('sound_notifications_enabled', v)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Email Notifications</p>
+                    <p className="text-xs text-muted-foreground">Receive email for key events</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={emailEnabled}
+                  onCheckedChange={(v) => updatePreference('email_notifications_enabled', v)}
+                />
+              </div>
+            </Card>
 
             {/* Logout */}
             <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
