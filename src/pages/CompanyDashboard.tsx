@@ -1,31 +1,36 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Briefcase, Users, Star, Zap, Loader2, Settings, Building2,
-  ArrowRight, CreditCard, Megaphone, FileText, CheckCircle
+  Briefcase, Users, Star, Loader2, Settings, Building2,
+  ArrowRight, CreditCard, FileText, Filter, X, Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { useJobs } from '@/hooks/useJobs';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useCompanyJobs, CompanyJobFilters } from '@/hooks/useCompanyJobs';
+import { useCompanySubscription } from '@/hooks/useCompanySubscription';
 import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
 import { NotificationsSheet } from '@/components/notifications/NotificationsSheet';
 import CompanyLayout from '@/components/navigation/CompanyLayout';
+import CompanyGlobalFeed from '@/components/company/CompanyGlobalFeed';
+import { SERVICE_CATEGORIES } from '@/context/AppContext';
+import { useToast } from '@/hooks/use-toast';
 
 const CompanyDashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const { myJobs, loading: jobsLoading } = useJobs();
   const { isAdmin } = useAdmin();
-
-  useEffect(() => {
-    if (!authLoading && !user) navigate('/auth');
-  }, [user, authLoading, navigate]);
+  const { jobs, loading: jobsLoading, filters, updateFilters, clearFilters } = useCompanyJobs();
+  const { isGated } = useCompanySubscription();
+  const { toast } = useToast();
+  const [showFilters, setShowFilters] = useState(false);
 
   if (authLoading || profileLoading) {
     return (
@@ -41,8 +46,23 @@ const CompanyDashboard = () => {
 
   const companyName = (profile as any).company_name || profile.full_name;
   const companyPlan = (profile as any).company_plan;
-  const activeJobs = myJobs.filter(j => j.status === 'open' || j.status === 'assigned' || j.status === 'in_progress');
-  const completedJobs = myJobs.filter(j => j.status === 'completed');
+  const activeJobs = jobs.filter(j => j.status === 'open' || j.status === 'assigned' || j.status === 'in_progress');
+  const completedJobs = jobs.filter(j => j.status === 'completed');
+
+  const gatedAction = (action: () => void) => {
+    if (isGated) {
+      toast({ title: 'Subscription Required', description: 'Subscribe to access this feature.', variant: 'destructive' });
+      navigate('/company/upgrade');
+      return;
+    }
+    action();
+  };
+
+  const handleFilterChange = (key: keyof CompanyJobFilters, value: string | number | undefined) => {
+    updateFilters({ ...filters, [key]: value || undefined });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v !== undefined && v !== '');
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -114,7 +134,7 @@ const CompanyDashboard = () => {
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/profile?tab=payments')}>
+                <Button variant="outline" size="sm" onClick={() => companyPlan ? navigate('/profile?tab=payments') : navigate('/company/upgrade')}>
                   {companyPlan ? 'Manage' : 'Subscribe'}
                 </Button>
               </div>
@@ -148,7 +168,7 @@ const CompanyDashboard = () => {
             <div className="grid grid-cols-2 gap-3">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Card className="p-4 cursor-pointer hover:border-primary/30 transition-colors"
-                  onClick={() => navigate('/post-job')}>
+                  onClick={() => gatedAction(() => navigate('/post-job'))}>
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <Briefcase className="w-6 h-6 text-primary" />
                   </div>
@@ -159,7 +179,7 @@ const CompanyDashboard = () => {
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Card className="p-4 cursor-pointer hover:border-secondary/30 transition-colors"
-                  onClick={() => navigate('/discover')}>
+                  onClick={() => gatedAction(() => navigate('/discover'))}>
                   <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
                     <Users className="w-6 h-6 text-secondary" />
                   </div>
@@ -170,7 +190,7 @@ const CompanyDashboard = () => {
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Card className="p-4 cursor-pointer hover:border-primary/30 transition-colors"
-                  onClick={() => navigate('/my-jobs')}>
+                  onClick={() => gatedAction(() => navigate('/my-jobs'))}>
                   <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
                     <FileText className="w-6 h-6 text-primary" />
                   </div>
@@ -181,7 +201,7 @@ const CompanyDashboard = () => {
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Card className="p-4 cursor-pointer hover:border-secondary/30 transition-colors"
-                  onClick={() => navigate('/profile?tab=payments')}>
+                  onClick={() => navigate('/company/upgrade')}>
                   <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
                     <CreditCard className="w-6 h-6 text-secondary" />
                   </div>
@@ -192,32 +212,155 @@ const CompanyDashboard = () => {
             </div>
           </motion.section>
 
-          {/* Recent Jobs */}
+          {/* Global Marketplace Feed */}
           <motion.section variants={cardVariants} custom={3}>
+            <CompanyGlobalFeed />
+          </motion.section>
+
+          {/* Jobs with Filters */}
+          <motion.section variants={cardVariants} custom={4}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">Recent Jobs</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/my-jobs')}>
-                View All <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
+              <h2 className="text-lg font-semibold text-foreground">My Jobs</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showFilters ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter className="w-4 h-4 mr-1" />
+                  Filters
+                  {hasActiveFilters && <span className="ml-1 w-2 h-2 rounded-full bg-primary" />}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => gatedAction(() => navigate('/my-jobs'))}>
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mb-4 space-y-3"
+              >
+                <Card className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Filter Jobs</span>
+                    {hasActiveFilters && (
+                      <Button variant="ghost" size="sm" onClick={clearFilters}>
+                        <X className="w-3 h-3 mr-1" /> Clear
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search jobs..."
+                      className="pl-9"
+                      value={filters.search || ''}
+                      onChange={(e) => handleFilterChange('search', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select
+                      value={filters.status || 'all'}
+                      onValueChange={(v) => handleFilterChange('status', v === 'all' ? undefined : v)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
+                        <SelectItem value="assigned">Assigned</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={filters.category || 'all'}
+                      onValueChange={(v) => handleFilterChange('category', v === 'all' ? undefined : v)}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {SERVICE_CATEGORIES.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      type="number"
+                      placeholder="Min budget"
+                      value={filters.budgetMin || ''}
+                      onChange={(e) => handleFilterChange('budgetMin', e.target.value ? Number(e.target.value) : undefined)}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Max budget"
+                      value={filters.budgetMax || ''}
+                      onChange={(e) => handleFilterChange('budgetMax', e.target.value ? Number(e.target.value) : undefined)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      type="date"
+                      placeholder="From date"
+                      value={filters.dateFrom || ''}
+                      onChange={(e) => handleFilterChange('dateFrom', e.target.value || undefined)}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="To date"
+                      value={filters.dateTo || ''}
+                      onChange={(e) => handleFilterChange('dateTo', e.target.value || undefined)}
+                    />
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Job List */}
             {jobsLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
-            ) : myJobs.length === 0 ? (
+            ) : jobs.length === 0 ? (
               <Card className="p-8 text-center">
                 <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No jobs posted yet</p>
-                <Button className="mt-3" onClick={() => navigate('/post-job')}>Post Your First Job</Button>
+                <p className="text-muted-foreground">
+                  {hasActiveFilters ? 'No jobs match your filters' : 'No jobs posted yet'}
+                </p>
+                {hasActiveFilters ? (
+                  <Button className="mt-3" variant="outline" onClick={clearFilters}>Clear Filters</Button>
+                ) : (
+                  <Button className="mt-3" onClick={() => gatedAction(() => navigate('/post-job'))}>Post Your First Job</Button>
+                )}
               </Card>
             ) : (
               <div className="space-y-3">
-                {myJobs.slice(0, 3).map(job => (
+                {jobs.slice(0, 5).map(job => (
                   <Card key={job.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="font-medium text-foreground">{job.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{job.category}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-muted-foreground">{job.category}</p>
+                          {job.budget && (
+                            <span className="text-xs text-muted-foreground">• ₦{job.budget.toLocaleString()}</span>
+                          )}
+                        </div>
                       </div>
                       <Badge variant={
                         job.status === 'open' ? 'default' :
