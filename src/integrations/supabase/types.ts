@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          photo_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          year_achieved: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          photo_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          year_achieved?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          photo_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          year_achieved?: number | null
+        }
+        Relationships: []
+      }
       ads: {
         Row: {
           ad_type: string | null
@@ -183,9 +216,12 @@ export type Database = {
           amount: number
           application_id: string
           auto_release_at: string | null
+          cancellation_fee: number | null
           commission_rate: number
           created_at: string
           delivered_at: string | null
+          dispute_evidence_urls: string[] | null
+          dispute_reason: string | null
           id: string
           job_id: string
           payee_id: string
@@ -205,9 +241,12 @@ export type Database = {
           amount: number
           application_id: string
           auto_release_at?: string | null
+          cancellation_fee?: number | null
           commission_rate?: number
           created_at?: string
           delivered_at?: string | null
+          dispute_evidence_urls?: string[] | null
+          dispute_reason?: string | null
           id?: string
           job_id: string
           payee_id: string
@@ -227,9 +266,12 @@ export type Database = {
           amount?: number
           application_id?: string
           auto_release_at?: string | null
+          cancellation_fee?: number | null
           commission_rate?: number
           created_at?: string
           delivered_at?: string | null
+          dispute_evidence_urls?: string[] | null
+          dispute_reason?: string | null
           id?: string
           job_id?: string
           payee_id?: string
@@ -854,6 +896,7 @@ export type Database = {
           admin_warning: string | null
           admin_warning_at: string | null
           avatar_url: string | null
+          bio: string | null
           cac_document_url: string | null
           cac_number: string | null
           company_address: string | null
@@ -900,6 +943,7 @@ export type Database = {
           admin_warning?: string | null
           admin_warning_at?: string | null
           avatar_url?: string | null
+          bio?: string | null
           cac_document_url?: string | null
           cac_number?: string | null
           company_address?: string | null
@@ -946,6 +990,7 @@ export type Database = {
           admin_warning?: string | null
           admin_warning_at?: string | null
           avatar_url?: string | null
+          bio?: string | null
           cac_document_url?: string | null
           cac_number?: string | null
           company_address?: string | null
