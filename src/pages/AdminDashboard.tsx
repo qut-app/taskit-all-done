@@ -63,6 +63,7 @@ const AdminDashboard = () => {
     showcases,
     categories,
     ads,
+    boostedPosts,
     subscriptions,
     loading,
     approveVerification,
@@ -74,6 +75,8 @@ const AdminDashboard = () => {
     createAd,
     updateAd,
     deleteAd,
+    approveBoostedPost,
+    rejectBoostedPost,
     refetch,
   } = useAdminData();
 
@@ -88,7 +91,7 @@ const AdminDashboard = () => {
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [feedbackView, setFeedbackView] = useState<'analytics' | 'list'>('analytics');
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
-
+  const [boostRejectReasons, setBoostRejectReasons] = useState<Record<string, string>>({});
   // Loading state
   if (authLoading || adminLoading) {
     return (
@@ -379,7 +382,7 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">Fraud</span>
             </TabsTrigger>
           </TabsList>
-          <TabsList className="grid w-full grid-cols-2 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-3 mb-4 h-auto">
             <TabsTrigger value="finance" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CreditCard className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Finance</span>
@@ -387,6 +390,15 @@ const AdminDashboard = () => {
             <TabsTrigger value="ai-fraud" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Brain className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">AI Fraud</span>
+            </TabsTrigger>
+            <TabsTrigger value="boosted-posts" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TrendingUp className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Boosts</span>
+              {boostedPosts.filter((p: any) => p.ad_status === 'pending').length > 0 && (
+                <Badge variant="destructive" className="ml-1 text-[9px] px-1 h-4 animate-pulse">
+                  {boostedPosts.filter((p: any) => p.ad_status === 'pending').length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -1074,6 +1086,121 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <AIFraudIntelligence />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Boosted Posts Approval Tab */}
+          <TabsContent value="boosted-posts">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Boosted Post Approvals
+                  {boostedPosts.filter((p: any) => p.ad_status === 'pending').length > 0 && (
+                    <Badge variant="destructive" className="animate-pulse">
+                      {boostedPosts.filter((p: any) => p.ad_status === 'pending').length}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : boostedPosts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No boosted posts yet.</p>
+                  </div>
+                ) : (
+                  <AnimatePresence>
+                    {boostedPosts.map((post: any, index: number) => (
+                      <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="p-4 bg-muted/30 rounded-xl space-y-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            {post.content && (
+                              <p className="text-sm text-foreground line-clamp-3">{post.content}</p>
+                            )}
+                            {post.image_url && (
+                              <div className="w-20 h-20 rounded-xl bg-muted overflow-hidden mt-2">
+                                <img src={post.image_url} alt="Post" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Badge variant={
+                                post.ad_status === 'approved' ? 'default' :
+                                post.ad_status === 'rejected' ? 'destructive' :
+                                post.ad_status === 'pending' ? 'secondary' : 'outline'
+                              } className="text-xs capitalize">
+                                {post.ad_status}
+                              </Badge>
+                              {post.boost_expires_at && (
+                                <Badge variant="outline" className="text-xs">
+                                  Expires: {new Date(post.boost_expires_at).toLocaleDateString()}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Posted: {new Date(post.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {post.ad_status === 'pending' && (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Rejection reason (required to reject)"
+                              value={boostRejectReasons[post.id] || ''}
+                              onChange={e => setBoostRejectReasons(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              className="text-xs"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 bg-success hover:bg-success/90"
+                                onClick={async () => {
+                                  const { error } = await approveBoostedPost(post.id);
+                                  if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                  else toast({ title: 'Boosted post approved and live!' });
+                                }}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 text-destructive border-destructive hover:bg-destructive/10"
+                                disabled={!boostRejectReasons[post.id]?.trim()}
+                                onClick={async () => {
+                                  const { error } = await rejectBoostedPost(post.id, boostRejectReasons[post.id]);
+                                  if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                                  else {
+                                    toast({ title: 'Boosted post rejected' });
+                                    setBoostRejectReasons(prev => { const n = { ...prev }; delete n[post.id]; return n; });
+                                  }
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {post.ad_status === 'rejected' && post.boost_reject_reason && (
+                          <p className="text-xs text-destructive">Reason: {post.boost_reject_reason}</p>
+                        )}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

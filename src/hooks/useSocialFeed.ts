@@ -31,10 +31,11 @@ export function useSocialFeed() {
     if (!user) return;
     setLoading(true);
     try {
-      // Fetch posts
+      // Fetch posts — exclude unapproved boosted posts
       const { data: rawPosts, error } = await supabase
         .from('posts' as any)
         .select('*')
+        .or('is_boosted.is.null,is_boosted.eq.false,and(is_boosted.eq.true,ad_status.eq.approved)')
         .order('created_at', { ascending: false })
         .limit(50);
 

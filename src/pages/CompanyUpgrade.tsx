@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Building2, CheckCircle, CreditCard, ArrowRight } from 'lucide-react';
+import { Building2, CheckCircle, CreditCard, ArrowRight, LogOut, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const CompanyUpgrade = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
   const { initializePayment, loading: paymentLoading } = usePaystackPayment();
   const { toast } = useToast();
@@ -59,13 +59,23 @@ const CompanyUpgrade = () => {
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto">
       <header className="p-4 safe-top">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-secondary" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-secondary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground">Upgrade Your Plan</h1>
+              <p className="text-xs text-muted-foreground">Subscribe to unlock company features</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">Upgrade Your Plan</h1>
-            <p className="text-xs text-muted-foreground">Subscribe to unlock company features</p>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+              <Home className="w-4 h-4 mr-1" /> Home
+            </Button>
+            <Button variant="outline" size="sm" onClick={async () => { await signOut(); navigate('/'); }}>
+              <LogOut className="w-4 h-4 mr-1" /> Logout
+            </Button>
           </div>
         </div>
       </header>
