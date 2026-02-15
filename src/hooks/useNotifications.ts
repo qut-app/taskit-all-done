@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -18,7 +18,43 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const lastSoundIdRef = useRef<string | null>(null);
 
+  // Load sound preference
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('sound_notifications_enabled')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setSoundEnabled((data as any).sound_notifications_enabled ?? true);
+      });
+  }, [user]);
+
+  const playNotificationSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
+      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+      setTimeout(() => ctx.close(), 500);
+    } catch (_) { /* silent */ }
+  }, [soundEnabled]);
   const fetchNotifications = async () => {
     if (!user) {
       setNotifications([]);
@@ -66,6 +102,17 @@ export function useNotifications() {
           const newNotification = payload.new as unknown as Notification;
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
+          
+          // Play sound once per notification
+          if (lastSoundIdRef.current !== newNotification.id) {
+            lastSoundIdRef.current = newNotification.id;
+            playNotificationSound();
+          }
+
+          // Trigger email notification in background (non-blocking)
+          supabase.functions.invoke('send-notification-email', {
+            body: { notification_id: newNotification.id },
+          }).catch(() => { /* email sending is non-blocking */ });
         }
       )
       .subscribe();
