@@ -45,6 +45,7 @@ export function useAdminData() {
   const [showcases, setShowcases] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
+  const [boostedPosts, setBoostedPosts] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +94,14 @@ export function useAdminData() {
         .select('*')
         .order('created_at', { ascending: false });
       setAds(adsData || []);
+
+      // Fetch pending boosted posts
+      const { data: boostedData } = await supabase
+        .from('posts' as any)
+        .select('*')
+        .eq('is_boosted', true)
+        .order('created_at', { ascending: false });
+      setBoostedPosts(boostedData || []);
 
       // Fetch subscriptions
       const { data: subsData } = await supabase
@@ -219,12 +228,31 @@ export function useAdminData() {
     return { error };
   };
 
+  const approveBoostedPost = async (postId: string) => {
+    const { error } = await supabase
+      .from('posts' as any)
+      .update({ ad_status: 'approved' })
+      .eq('id', postId);
+    if (!error) await fetchData();
+    return { error };
+  };
+
+  const rejectBoostedPost = async (postId: string, reason: string) => {
+    const { error } = await supabase
+      .from('posts' as any)
+      .update({ ad_status: 'rejected', boost_reject_reason: reason })
+      .eq('id', postId);
+    if (!error) await fetchData();
+    return { error };
+  };
+
   return {
     users,
     pendingVerifications,
     showcases,
     categories,
     ads,
+    boostedPosts,
     subscriptions,
     loading,
     refetch: fetchData,
@@ -237,5 +265,7 @@ export function useAdminData() {
     createAd,
     updateAd,
     deleteAd,
+    approveBoostedPost,
+    rejectBoostedPost,
   };
 }

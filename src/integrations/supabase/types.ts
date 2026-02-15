@@ -831,28 +831,40 @@ export type Database = {
       }
       posts: {
         Row: {
+          ad_status: string | null
+          boost_expires_at: string | null
+          boost_reject_reason: string | null
           content: string | null
           created_at: string
           id: string
           image_url: string | null
+          is_boosted: boolean | null
           updated_at: string
           user_id: string
           video_url: string | null
         }
         Insert: {
+          ad_status?: string | null
+          boost_expires_at?: string | null
+          boost_reject_reason?: string | null
           content?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
+          is_boosted?: boolean | null
           updated_at?: string
           user_id: string
           video_url?: string | null
         }
         Update: {
+          ad_status?: string | null
+          boost_expires_at?: string | null
+          boost_reject_reason?: string | null
           content?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
+          is_boosted?: boolean | null
           updated_at?: string
           user_id?: string
           video_url?: string | null
