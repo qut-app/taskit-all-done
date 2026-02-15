@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Loader2, CheckCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Loader2, CheckCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -9,8 +9,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useJobs } from '@/hooks/useJobs';
 import { useCategories } from '@/hooks/useCategories';
+import { useCompanySubscription } from '@/hooks/useCompanySubscription';
 import { useToast } from '@/hooks/use-toast';
 import PostJobCategorySelector from '@/components/PostJobCategorySelector';
+import UpgradeRequiredDialog from '@/components/company/UpgradeRequiredDialog';
 
 const DELIVERY_TIMES = ['1 day', '2 days', '3 days', '1 week', '2 weeks', '1 month'];
 
@@ -20,6 +22,8 @@ const PostJob = () => {
   const { profile } = useProfile();
   const { createJob } = useJobs();
   const { categories } = useCategories();
+  const { isGated } = useCompanySubscription();
+  const isCompanyAccount = (profile as any)?.account_type === 'company';
   const { toast } = useToast();
 
   const [step, setStep] = useState<'form' | 'success'>('form');
@@ -40,6 +44,19 @@ const PostJob = () => {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  // Block unsubscribed companies
+  if (isCompanyAccount && isGated) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center space-y-4">
+        <Lock className="w-12 h-12 text-warning" />
+        <h1 className="text-xl font-bold text-foreground">Upgrade Required</h1>
+        <p className="text-sm text-muted-foreground">To post jobs, create content, or boost posts, please subscribe to a Company plan.</p>
+        <Button onClick={() => navigate('/company/upgrade')}>View Plans</Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>Go Back</Button>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     // Check verification status
