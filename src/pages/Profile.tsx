@@ -33,6 +33,7 @@ import { Switch } from '@/components/ui/switch';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
+import { SUBSCRIPTION_PLANS, formatNaira } from '@/config/subscriptionConfig';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -679,10 +680,10 @@ const Profile = () => {
                   <Card className="p-4 border-primary/20">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold text-foreground">Slot Boost</h4>
-                      <Badge>₦4,500/month</Badge>
+                      <Badge>{formatNaira(SUBSCRIPTION_PLANS.service_provider.price)}/month</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">Get extra job slots and priority in discovery.</p>
-                    <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('provider_slot_boost', 4500)}>
+                    <p className="text-xs text-muted-foreground mb-3">{SUBSCRIPTION_PLANS.service_provider.description}</p>
+                    <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('provider_slot_boost', SUBSCRIPTION_PLANS.service_provider.price)}>
                       {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                       Subscribe Now
                     </Button>
@@ -694,10 +695,10 @@ const Profile = () => {
                   <Card className="p-4 border-secondary/20">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold text-foreground">Unlimited Hiring</h4>
-                      <Badge variant="secondary">₦7,500/month</Badge>
+                      <Badge variant="secondary">{formatNaira(SUBSCRIPTION_PLANS.requester_unlimited.price)}/month</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3">Unlimited job postings, priority support, and ad-free experience.</p>
-                    <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 7500)}>
+                    <p className="text-xs text-muted-foreground mb-3">{SUBSCRIPTION_PLANS.requester_unlimited.description}</p>
+                    <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', SUBSCRIPTION_PLANS.requester_unlimited.price)}>
                       {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                       Subscribe Now
                     </Button>
@@ -712,10 +713,10 @@ const Profile = () => {
                 <Card className="p-4 border-primary/20">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold text-foreground">Business Plan</h4>
-                    <Badge>₦25,000/month</Badge>
+                    <Badge>{formatNaira(SUBSCRIPTION_PLANS.company_business.price)}/month</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Essential hiring tools, up to 10 active jobs.</p>
-                  <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 25000)}>
+                  <p className="text-xs text-muted-foreground mb-3">{SUBSCRIPTION_PLANS.company_business.description}</p>
+                  <Button className="w-full" size="sm" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', SUBSCRIPTION_PLANS.company_business.price)}>
                     {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                     Subscribe Now
                   </Button>
@@ -723,10 +724,10 @@ const Profile = () => {
                 <Card className="p-4 border-secondary/20 bg-gradient-to-br from-secondary/5 to-transparent">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold text-foreground">Professional Plan</h4>
-                    <Badge variant="secondary">₦50,000/month</Badge>
+                    <Badge variant="secondary">{formatNaira(SUBSCRIPTION_PLANS.company_professional.price)}/month</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">Full access including service rendering, unlimited jobs, and premium support.</p>
-                  <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', 50000)}>
+                  <p className="text-xs text-muted-foreground mb-3">{SUBSCRIPTION_PLANS.company_professional.description}</p>
+                  <Button className="w-full" size="sm" variant="secondary" disabled={paymentLoading} onClick={() => handleSubscribe('requester_unlimited', SUBSCRIPTION_PLANS.company_professional.price)}>
                     {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
                     Subscribe Now
                   </Button>
