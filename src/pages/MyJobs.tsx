@@ -150,7 +150,7 @@ const MyJobs = () => {
   const handleEscrowPayment = async () => {
     if (!selectedPlan || !selectedApp || !user || !selectedJobId) return;
 
-    const commissionRate = selectedApp.isPaid ? 0.05 : 0.20;
+    const commissionRate = selectedApp.isPaid ? 0.05 : 0.12;
     const amount = Number(selectedPlan.price);
     const commission = Math.round(amount * commissionRate);
     const providerEarnings = amount - commission;
@@ -739,16 +739,16 @@ const MyJobs = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Commission ({selectedApp.isPaid ? '5%' : '20%'})
+                    Commission ({selectedApp.isPaid ? '5%' : '12%'})
                   </span>
                   <span className="text-muted-foreground">
-                    -{formatBudget(Math.round(Number(selectedPlan.price) * (selectedApp.isPaid ? 0.05 : 0.20)))}
+                    -{formatBudget(Math.round(Number(selectedPlan.price) * (selectedApp.isPaid ? 0.05 : 0.12)))}
                   </span>
                 </div>
                 <div className="border-t border-border pt-1 flex justify-between text-sm font-semibold">
                   <span className="text-foreground">Provider receives</span>
                   <span className="text-foreground">
-                    {formatBudget(Number(selectedPlan.price) - Math.round(Number(selectedPlan.price) * (selectedApp.isPaid ? 0.05 : 0.20)))}
+                    {formatBudget(Number(selectedPlan.price) - Math.round(Number(selectedPlan.price) * (selectedApp.isPaid ? 0.05 : 0.12)))}
                   </span>
                 </div>
               </div>

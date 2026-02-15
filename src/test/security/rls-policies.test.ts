@@ -93,7 +93,7 @@ describe("RLS Policy Enforcement - Mutation Blocking", () => {
     const { error } = await anonClient.from("platform_revenue").insert({
       escrow_transaction_id: "00000000-0000-0000-0000-000000000000",
       commission_amount: 1000,
-      commission_rate: 0.2,
+      commission_rate: 0.12,
       provider_id: "00000000-0000-0000-0000-000000000000",
       job_id: "00000000-0000-0000-0000-000000000000",
       month_year: "2026-02",
