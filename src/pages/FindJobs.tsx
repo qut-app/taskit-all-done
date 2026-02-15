@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Wifi, Map, Loader2, MapPin, Building2, User, 
-  Clock, DollarSign, X, Scale, Send, Plus, Trash2
+  Clock, DollarSign, X, Scale, Send, Plus, Trash2, Calendar
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import MobileLayout from '@/components/navigation/MobileLayout';
 import JobCard from '@/components/cards/JobCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useJobs } from '@/hooks/useJobs';
+import { useJobSearch, DEFAULT_FILTERS, JobSearchFilters } from '@/hooks/useJobSearch';
 import { useCategories } from '@/hooks/useCategories';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useProfile } from '@/hooks/useProfile';
@@ -41,17 +42,23 @@ const EMPTY_PLAN: PricingPlan = { plan_type: '', price: '', description: '', del
 const FindJobs = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { jobs, myApplications, loading: jobsLoading, applyToJob } = useJobs();
+  const { myApplications, applyToJob } = useJobs();
   const { categories } = useCategories();
   const { profile } = useProfile();
   const geo = useGeolocation();
   const { toast } = useToast();
   
+  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [serviceMode, setServiceMode] = useState<'all' | 'online' | 'offline'>('all');
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [accountTypeFilter, setAccountTypeFilter] = useState<'all' | 'individual' | 'company'>('all');
+  const [budgetMin, setBudgetMin] = useState<string>('');
+  const [budgetMax, setBudgetMax] = useState<string>('');
+  const [datePosted, setDatePosted] = useState<'all' | '24h' | '7d' | '30d'>('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
   const [viewingJob, setViewingJob] = useState<any | null>(null);
 
@@ -92,36 +99,34 @@ const FindJobs = () => {
   // Build set of already-applied job IDs
   const appliedJobIds = new Set(myApplications.map(a => a.job_id));
 
-  // Default location from geolocation or profile
-  useEffect(() => {
-    if (geo.locationName && !locationFilter) {
-      setLocationFilter(geo.locationName);
-    } else if (!geo.locationName && profile?.location && !locationFilter) {
-      setLocationFilter(profile.location);
-    }
-  }, [geo.locationName, profile?.location]);
+  // Build filters object for server-side query
+  const filters: JobSearchFilters = useMemo(() => ({
+    searchQuery,
+    category: selectedCategory,
+    serviceMode,
+    location: locationFilter,
+    accountType: accountTypeFilter,
+    budgetMin: budgetMin ? Number(budgetMin) : null,
+    budgetMax: budgetMax ? Number(budgetMax) : null,
+    datePosted,
+  }), [searchQuery, selectedCategory, serviceMode, locationFilter, accountTypeFilter, budgetMin, budgetMax, datePosted]);
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
-  }, [user, authLoading, navigate]);
+  // Server-side filtered jobs
+  const { jobs: filteredJobs, loading: jobsLoading } = useJobSearch(filters);
 
-  const filteredJobs = jobs.filter((job) => {
-    if (job.status !== 'open') return false;
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (job.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || job.category === selectedCategory;
-    const matchesMode = serviceMode === 'all' || job.service_mode === serviceMode || job.service_mode === 'both';
-    if (locationFilter) {
-      const jobLoc = job.location?.toLowerCase() || '';
-      if (!jobLoc.includes(locationFilter.toLowerCase())) return false;
-    }
-    if (accountTypeFilter !== 'all') {
-      if ((job.requester_profile as any)?.account_type !== accountTypeFilter) return false;
-    }
-    return matchesSearch && matchesCategory && matchesMode;
-  });
+  const hasActiveFilters = searchQuery || selectedCategory || serviceMode !== 'all' || 
+    locationFilter || accountTypeFilter !== 'all' || budgetMin || budgetMax || datePosted !== 'all';
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory(null);
+    setServiceMode('all');
+    setLocationFilter(null);
+    setAccountTypeFilter('all');
+    setBudgetMin('');
+    setBudgetMax('');
+    setDatePosted('all');
+  };
 
   const handleApplyClick = (job: any) => {
     if (appliedJobIds.has(job.id)) {
@@ -323,19 +328,30 @@ const FindJobs = () => {
         </div>
 
         {/* Footer Filters: Location + Account Type */}
-        <div className="flex gap-2">
-          <Button
-            variant={locationFilter ? 'soft' : 'outline'}
-            size="sm"
-            className="gap-1"
-            onClick={() => {
-              if (locationFilter) setLocationFilter(null);
-              else setLocationFilter(geo.locationName || profile?.location || '');
-            }}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            {locationFilter || 'Location'}
-          </Button>
+        <div className="flex gap-2 flex-wrap">
+          <div className="relative flex-shrink-0">
+            {locationFilter ? (
+              <div className="flex items-center gap-1">
+                <Badge variant="soft" className="gap-1 cursor-pointer" onClick={() => setLocationFilter(null)}>
+                  <MapPin className="w-3 h-3" />
+                  {locationFilter}
+                  <X className="w-3 h-3" />
+                </Badge>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => {
+                  const loc = geo.locationName || profile?.location || '';
+                  if (loc) setLocationFilter(loc);
+                }}
+              >
+                <MapPin className="w-3.5 h-3.5" />Location
+              </Button>
+            )}
+          </div>
           <Button
             variant={accountTypeFilter === 'individual' ? 'soft' : 'ghost'}
             size="sm"
@@ -352,7 +368,51 @@ const FindJobs = () => {
           >
             <Building2 className="w-3.5 h-3.5" />Company
           </Button>
+          <Button
+            variant={showAdvancedFilters ? 'soft' : 'ghost'}
+            size="sm"
+            className="gap-1"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          >
+            <Filter className="w-3.5 h-3.5" />More
+          </Button>
         </div>
+
+        {/* Advanced Filters */}
+        {showAdvancedFilters && (
+          <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+            {/* Budget Range */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Budget Range (₦)</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="Min"
+                  value={budgetMin}
+                  onChange={(e) => setBudgetMin(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="Max"
+                  value={budgetMax}
+                  onChange={(e) => setBudgetMax(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+            </div>
+            {/* Date Posted */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Date Posted</label>
+              <div className="flex gap-2">
+                <Button variant={datePosted === 'all' ? 'soft' : 'ghost'} size="sm" onClick={() => setDatePosted('all')}>Any time</Button>
+                <Button variant={datePosted === '24h' ? 'soft' : 'ghost'} size="sm" onClick={() => setDatePosted('24h')}>24h</Button>
+                <Button variant={datePosted === '7d' ? 'soft' : 'ghost'} size="sm" onClick={() => setDatePosted('7d')}>7 days</Button>
+                <Button variant={datePosted === '30d' ? 'soft' : 'ghost'} size="sm" onClick={() => setDatePosted('30d')}>30 days</Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -377,9 +437,11 @@ const FindJobs = () => {
           <p className="text-sm text-muted-foreground">
             {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} available
           </p>
-          <Button variant="ghost" size="sm" className="gap-1">
-            <Filter className="w-4 h-4" />Filters
-          </Button>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" className="gap-1 text-destructive" onClick={clearAllFilters}>
+              <X className="w-4 h-4" />Clear Filters
+            </Button>
+          )}
         </div>
 
         {jobsLoading ? (
