@@ -1229,6 +1229,98 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_risk_assessments: {
+        Row: {
+          auto_hold: boolean
+          created_at: string
+          escrow_transaction_id: string | null
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_factors: Json
+          risk_level: string
+          user_id: string
+        }
+        Insert: {
+          auto_hold?: boolean
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_factors?: Json
+          risk_level?: string
+          user_id: string
+        }
+        Update: {
+          auto_hold?: boolean
+          created_at?: string
+          escrow_transaction_id?: string | null
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_factors?: Json
+          risk_level?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_risk_assessments_escrow_transaction_id_fkey"
+            columns: ["escrow_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "escrow_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trust_scores: {
+        Row: {
+          account_age_factor: number
+          cancellation_penalty: number
+          completed_jobs_factor: number
+          created_at: string
+          dispute_penalty: number
+          id: string
+          last_calculated_at: string
+          on_time_factor: number
+          report_penalty: number
+          review_factor: number
+          role_switch_penalty: number
+          score: number
+          user_id: string
+        }
+        Insert: {
+          account_age_factor?: number
+          cancellation_penalty?: number
+          completed_jobs_factor?: number
+          created_at?: string
+          dispute_penalty?: number
+          id?: string
+          last_calculated_at?: string
+          on_time_factor?: number
+          report_penalty?: number
+          review_factor?: number
+          role_switch_penalty?: number
+          score?: number
+          user_id: string
+        }
+        Update: {
+          account_age_factor?: number
+          cancellation_penalty?: number
+          completed_jobs_factor?: number
+          created_at?: string
+          dispute_penalty?: number
+          id?: string
+          last_calculated_at?: string
+          on_time_factor?: number
+          report_penalty?: number
+          review_factor?: number
+          role_switch_penalty?: number
+          score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1406,6 +1498,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assess_transaction_risk: { Args: { _escrow_id: string }; Returns: string }
+      calculate_trust_score: { Args: { _user_id: string }; Returns: number }
       create_verification_notification: {
         Args: {
           _message: string

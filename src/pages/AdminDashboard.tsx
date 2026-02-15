@@ -36,6 +36,7 @@ import { useAdminFeedback } from '@/hooks/useFeedback';
 import { FeedbackAnalytics } from '@/components/admin/FeedbackAnalytics';
 import { ModerationTab } from '@/components/admin/ModerationTab';
 import { MarketplaceIntelligence } from '@/components/admin/MarketplaceIntelligence';
+import { FraudDashboard } from '@/components/admin/FraudDashboard';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -353,7 +354,7 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">Tags</span>
             </TabsTrigger>
           </TabsList>
-          <TabsList className="grid w-full grid-cols-4 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-5 mb-4 h-auto">
             <TabsTrigger value="ads" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Megaphone className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Ads</span>
@@ -369,6 +370,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="intelligence" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BarChart3 className="w-4 h-4 sm:mr-1" />
               <span className="hidden sm:inline">Intel</span>
+            </TabsTrigger>
+            <TabsTrigger value="fraud" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Shield className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Fraud</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1011,6 +1016,21 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <MarketplaceIntelligence />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Fraud Dashboard Tab */}
+          <TabsContent value="fraud">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Anti-Fraud & Trust Scores
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FraudDashboard />
               </CardContent>
             </Card>
           </TabsContent>
