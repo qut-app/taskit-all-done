@@ -43,7 +43,7 @@ const App = () => (
                 <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
                 <Route path="/role-select" element={<AuthGuard><RoleSelect /></AuthGuard>} />
                 <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
-                <Route path="/company-dashboard" element={<AuthGuard><CompanySubscriptionGate><CompanyDashboard /></CompanySubscriptionGate></AuthGuard>} />
+                <Route path="/company-dashboard" element={<AuthGuard><CompanyDashboard /></AuthGuard>} />
                 <Route path="/company/upgrade" element={<AuthGuard><CompanyUpgrade /></AuthGuard>} />
                 <Route path="/discover" element={<AuthGuard><Discover /></AuthGuard>} />
                 <Route path="/view-profile/:userId" element={<AuthGuard><ViewProfile /></AuthGuard>} />

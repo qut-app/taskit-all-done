@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Briefcase, Users, Star, Loader2, Settings, Building2,
-  ArrowRight, CreditCard, FileText, Filter, X, Search
+  ArrowRight, CreditCard, FileText, Filter, X, Search, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -167,35 +167,44 @@ const CompanyDashboard = () => {
             <h2 className="text-lg font-semibold text-foreground mb-3">Quick Actions</h2>
             <div className="grid grid-cols-2 gap-3">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Card className="p-4 cursor-pointer hover:border-primary/30 transition-colors"
+                <Card className={`p-4 cursor-pointer hover:border-primary/30 transition-colors ${isGated ? 'opacity-70' : ''}`}
                   onClick={() => gatedAction(() => navigate('/post-job'))}>
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3 relative">
                     <Briefcase className="w-6 h-6 text-primary" />
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning absolute -top-1 -right-1" />}
                   </div>
-                  <h3 className="font-semibold text-foreground">Post a Job</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Hire talent now</p>
+                  <h3 className="font-semibold text-foreground flex items-center gap-1">
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning" />} Post a Job
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">{isGated ? 'Upgrade to unlock' : 'Hire talent now'}</p>
                 </Card>
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Card className="p-4 cursor-pointer hover:border-secondary/30 transition-colors"
+                <Card className={`p-4 cursor-pointer hover:border-secondary/30 transition-colors ${isGated ? 'opacity-70' : ''}`}
                   onClick={() => gatedAction(() => navigate('/discover'))}>
-                  <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3 relative">
                     <Users className="w-6 h-6 text-secondary" />
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning absolute -top-1 -right-1" />}
                   </div>
-                  <h3 className="font-semibold text-foreground">Find Providers</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Browse experts</p>
+                  <h3 className="font-semibold text-foreground flex items-center gap-1">
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning" />} Find Providers
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">{isGated ? 'Upgrade to unlock' : 'Browse experts'}</p>
                 </Card>
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Card className="p-4 cursor-pointer hover:border-primary/30 transition-colors"
+                <Card className={`p-4 cursor-pointer hover:border-primary/30 transition-colors ${isGated ? 'opacity-70' : ''}`}
                   onClick={() => gatedAction(() => navigate('/my-jobs'))}>
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3 relative">
                     <FileText className="w-6 h-6 text-primary" />
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning absolute -top-1 -right-1" />}
                   </div>
-                  <h3 className="font-semibold text-foreground">Applicants</h3>
-                  <p className="text-xs text-muted-foreground mt-1">Manage responses</p>
+                  <h3 className="font-semibold text-foreground flex items-center gap-1">
+                    {isGated && <Lock className="w-3.5 h-3.5 text-warning" />} Applicants
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">{isGated ? 'Upgrade to unlock' : 'Manage responses'}</p>
                 </Card>
               </motion.div>
 

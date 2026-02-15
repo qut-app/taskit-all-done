@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Share2, Bookmark, Send, Image as ImageIcon,
-  Video, Loader2, Trash2, Building2, X
+  Video, Loader2, Trash2, Building2, X, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useCompanySubscription } from '@/hooks/useCompanySubscription';
 import { useFavourites } from '@/hooks/useFavourites';
+import UpgradeRequiredDialog from '@/components/company/UpgradeRequiredDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -35,7 +36,7 @@ const Feed = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
-
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const isCompanyAccount = (profile as any)?.account_type === 'company';
   const canPost = !isCompanyAccount || !companyIsGated;
   const Layout = isCompanyAccount ? CompanyLayout : MobileLayout;
@@ -153,11 +154,24 @@ const Feed = () => {
             </div>
           </Card>
         ) : isCompanyAccount ? (
-          <Card className="p-4">
+          <Card className="p-4 space-y-3">
             <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">Subscribe to a plan to create posts</p>
-              <Button size="sm" onClick={() => navigate('/company/upgrade')}>Upgrade Now</Button>
+              <Lock className="w-8 h-8 text-warning mx-auto" />
+              <p className="text-sm font-medium text-foreground">Upgrade Required</p>
+              <p className="text-xs text-muted-foreground">Subscribe to create posts, post jobs, and boost content</p>
             </div>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" className="w-full opacity-60 cursor-not-allowed" disabled>
+                <Lock className="w-3.5 h-3.5 mr-1.5" /> Create Post
+              </Button>
+              <Button variant="outline" size="sm" className="w-full opacity-60 cursor-not-allowed" disabled>
+                <Lock className="w-3.5 h-3.5 mr-1.5" /> Post Job
+              </Button>
+              <Button variant="outline" size="sm" className="w-full opacity-60 cursor-not-allowed" disabled>
+                <Lock className="w-3.5 h-3.5 mr-1.5" /> Boost Post
+              </Button>
+            </div>
+            <Button size="sm" className="w-full" onClick={() => setShowUpgradeDialog(true)}>View Plans</Button>
           </Card>
         ) : null}
 
@@ -193,6 +207,7 @@ const Feed = () => {
           </AnimatePresence>
         )}
       </div>
+      <UpgradeRequiredDialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog} />
     </Layout>
   );
 };
