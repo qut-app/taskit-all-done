@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, CheckCircle, XCircle, MessageSquare, Star, MapPin, Shield, Clock, DollarSign, CreditCard, AlertTriangle } from 'lucide-react';
+import { EscrowStatusBanner } from '@/components/jobs/EscrowStatusBanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -422,6 +423,18 @@ const MyJobs = () => {
                       isOwner={!isProvider}
                       onEdit={() => setEditingJob(job as any)}
                     />
+                    {/* Escrow Status Banner */}
+                    {(job.status === 'in_progress' || job.status === 'assigned') && (
+                      <div className="mt-2">
+                        <EscrowStatusBanner
+                          jobId={job.id}
+                          isProvider={isProvider}
+                          isRequester={!isProvider}
+                          jobStatus={job.status || 'open'}
+                          onJobUpdate={() => handleMarkComplete(job.id)}
+                        />
+                      </div>
+                    )}
                     {!isProvider && job.status === 'open' && (
                       <Button 
                         variant="outline" 

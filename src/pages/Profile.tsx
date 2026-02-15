@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
   Edit3, Camera, Loader2, LogOut, Heart, Users, Megaphone, CreditCard,
-  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft
+  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import { useReferrals } from '@/hooks/useReferrals';
 import { usePaystackPayment } from '@/hooks/usePaystackPayment';
 import { useFeedback } from '@/hooks/useFeedback';
 import { AdManagerTab } from '@/components/profile/AdManagerTab';
+import { AchievementsTab } from '@/components/profile/AchievementsTab';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -58,6 +59,7 @@ const Profile = () => {
     company_address: '',
     service_description: '',
     gender: '',
+    bio: '',
   });
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -93,6 +95,7 @@ const Profile = () => {
       company_address: profile?.company_address || '',
       service_description: providerProfile?.service_description || '',
       gender: profile?.gender || '',
+      bio: (profile as any)?.bio || '',
     });
     setIsEditing(true);
   };
@@ -103,6 +106,7 @@ const Profile = () => {
       full_name: editForm.full_name,
       phone: editForm.phone,
       location: editForm.location,
+      bio: editForm.bio.slice(0, 500) || null,
     };
     if (!isCompany && editForm.gender) {
       profileUpdates.gender = editForm.gender;
@@ -335,12 +339,28 @@ const Profile = () => {
                   <Textarea value={editForm.service_description} onChange={(e) => setEditForm(prev => ({ ...prev, service_description: e.target.value }))} placeholder="Describe your services..." rows={3} />
                 </div>
               )}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">About (Bio)</label>
+                <Textarea 
+                  value={editForm.bio} 
+                  onChange={(e) => setEditForm(prev => ({ ...prev, bio: e.target.value.slice(0, 500) }))} 
+                  placeholder="Tell people about yourself..." 
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground mt-1">{editForm.bio.length}/500</p>
+              </div>
             </div>
           )}
 
           {/* Display info when not editing */}
           {!isEditing && (
             <div className="mt-4 pt-4 border-t border-border space-y-2">
+              {(profile as any)?.bio && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">About</p>
+                  <p className="text-sm text-foreground">{(profile as any).bio}</p>
+                </div>
+              )}
               {profile.phone && <p className="text-sm text-muted-foreground">📞 {profile.phone}</p>}
               {profile.location && <p className="text-sm text-muted-foreground">📍 {profile.location}</p>}
               {isProvider && providerProfile?.service_description && (
@@ -370,6 +390,7 @@ const Profile = () => {
               </TabsTrigger>
               <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
               <TabsTrigger value="feedback" className="text-xs">Feedback</TabsTrigger>
+              <TabsTrigger value="achievements" className="text-xs">Achievements</TabsTrigger>
               <TabsTrigger value="ads" className="text-xs">Ad Manager</TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
@@ -803,6 +824,11 @@ const Profile = () => {
                 </div>
               )}
             </Card>
+          </TabsContent>
+
+          {/* ===== ACHIEVEMENTS TAB ===== */}
+          <TabsContent value="achievements" className="space-y-4">
+            <AchievementsTab isOwner={true} />
           </TabsContent>
 
           <TabsContent value="ads" className="space-y-4">

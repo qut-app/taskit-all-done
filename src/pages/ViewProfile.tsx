@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Star, Clock, Shield, Loader2, Heart, Flag } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Clock, Shield, Loader2, Heart, Flag, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { trackEvent } from '@/hooks/useAnalytics';
+import { AchievementsTab } from '@/components/profile/AchievementsTab';
 
 const ViewProfile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -174,6 +175,14 @@ const ViewProfile = () => {
         {provider.service_description && (
           <p className="text-sm text-muted-foreground mt-3 max-w-xs mx-auto">{provider.service_description}</p>
         )}
+
+        {/* Bio / About section */}
+        {(profile as any)?.bio && (
+          <div className="mt-3 px-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">About</p>
+            <p className="text-sm text-foreground max-w-xs mx-auto">{(profile as any).bio}</p>
+          </div>
+        )}
       </div>
 
       {/* Stats Row */}
@@ -256,6 +265,17 @@ const ViewProfile = () => {
           <p className="text-sm text-muted-foreground">No reviews yet</p>
         )}
       </div>
+
+      {/* Achievements */}
+      {userId && (
+        <div className="px-6 pb-4">
+          <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+            <Trophy className="w-4 h-4" />
+            Achievements
+          </h3>
+          <AchievementsTab userId={userId} isOwner={false} />
+        </div>
+      )}
 
       {/* Hire Button */}
       {user && user.id !== userId && (
