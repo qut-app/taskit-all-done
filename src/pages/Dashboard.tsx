@@ -30,6 +30,7 @@ import RecommendedExperts from '@/components/dashboard/RecommendedExperts';
 import ShowcaseFeed from '@/components/dashboard/ShowcaseFeed';
 import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
 import { NotificationsSheet } from '@/components/notifications/NotificationsSheet';
+import { SUBSCRIPTION_PLANS, formatNaira } from '@/config/subscriptionConfig';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ const Dashboard = () => {
                 <p className="text-sm opacity-80">Post unlimited jobs with premium</p>
               </div>
               <Button variant="secondary" size="sm" className="shrink-0">
-                ₦7,500/mo
+                {formatNaira(SUBSCRIPTION_PLANS.requester_unlimited.price)}/mo
               </Button>
             </div>
           </Card>
@@ -323,7 +324,7 @@ const Dashboard = () => {
                 <p className="text-sm opacity-80">Get more job capacity with premium</p>
               </div>
               <Button variant="secondary" size="sm" className="shrink-0">
-                ₦4,000/mo
+                {formatNaira(SUBSCRIPTION_PLANS.service_provider.price)}/mo
               </Button>
             </div>
           </Card>
