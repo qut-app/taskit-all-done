@@ -22,7 +22,8 @@ import {
   FileText,
   BadgeCheck,
   BarChart3,
-  Flag
+  Flag,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +39,7 @@ import { ModerationTab } from '@/components/admin/ModerationTab';
 import { MarketplaceIntelligence } from '@/components/admin/MarketplaceIntelligence';
 import { FraudDashboard } from '@/components/admin/FraudDashboard';
 import { FinancialAnalytics } from '@/components/admin/FinancialAnalytics';
+import { AIFraudIntelligence } from '@/components/admin/AIFraudIntelligence';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -377,10 +379,14 @@ const AdminDashboard = () => {
               <span className="hidden sm:inline">Fraud</span>
             </TabsTrigger>
           </TabsList>
-          <TabsList className="grid w-full grid-cols-1 mb-4 h-auto">
+          <TabsList className="grid w-full grid-cols-2 mb-4 h-auto">
             <TabsTrigger value="finance" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CreditCard className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Financial Analytics</span>
+              <span className="hidden sm:inline">Finance</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai-fraud" className="text-xs py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Brain className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">AI Fraud</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1053,6 +1059,21 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <FinancialAnalytics />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* AI Fraud Intelligence Tab */}
+          <TabsContent value="ai-fraud">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Brain className="w-5 h-5" />
+                  AI Fraud Intelligence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AIFraudIntelligence />
               </CardContent>
             </Card>
           </TabsContent>

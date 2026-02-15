@@ -97,6 +97,24 @@ serve(async (req) => {
       });
 
       console.log(`Escrow ${escrow.id} held with 24-hour release delay`);
+
+      // Silent AI fraud scoring - runs in background, does not block payment
+      try {
+        const { data: aiResult } = await supabase.rpc("calculate_ai_fraud_score", {
+          _user_id: escrow.payer_id,
+          _transaction_id: escrow.id,
+        });
+        console.log(`AI fraud score for escrow ${escrow.id}:`, aiResult);
+        
+        // Also score the payee
+        await supabase.rpc("calculate_ai_fraud_score", {
+          _user_id: escrow.payee_id,
+          _transaction_id: escrow.id,
+        });
+      } catch (aiErr) {
+        // AI scoring is non-blocking - log but don't fail the webhook
+        console.error("AI fraud scoring error (non-blocking):", aiErr);
+      }
     } else {
       // Check if this is a subscription payment
       const subscriptionType = metadata?.subscription_type;
