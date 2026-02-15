@@ -159,52 +159,22 @@ export const EscrowStatusBanner = ({ jobId, isProvider, isRequester, jobStatus, 
     let refundAmount = amount;
 
     if (providerArrived) {
-      // 15% or ₦2,000 minimum
       cancellationFee = Math.max(amount * 0.15, 2000);
       refundAmount = amount - cancellationFee;
     }
 
-    const { error } = await supabase
-      .from('escrow_transactions')
-      .update({
-        status: 'cancelled',
-        cancellation_fee: cancellationFee,
-      })
-      .eq('id', escrow.id);
+    // Use the secure RPC for atomic cancellation (wallet updates + ledger entries)
+    const { data: result, error } = await supabase
+      .rpc('process_escrow_cancellation', {
+        _escrow_id: escrow.id,
+        _provider_arrived: providerArrived,
+      }) as { data: any; error: any };
 
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    if (error || result?.error) {
+      toast({ title: 'Error', description: error?.message || result?.error || 'Cancellation failed', variant: 'destructive' });
     } else {
       // Update job status
       await supabase.from('jobs').update({ status: 'cancelled' }).eq('id', jobId);
-
-      if (providerArrived && cancellationFee > 0) {
-        // Credit call-out fee to provider wallet
-        await supabase.from('wallet_transactions').insert({
-          user_id: escrow.payee_id,
-          type: 'credit',
-          source: 'cancellation_fee',
-          amount: cancellationFee,
-          reference: `cancel_fee_${escrow.id}`,
-          escrow_transaction_id: escrow.id,
-        });
-        // Update provider wallet
-        try { await supabase.rpc('process_escrow_release', { _escrow_id: escrow.id }); } catch {}
-      }
-
-      // Notify both parties
-      const msgs = [
-        supabase.from('notifications').insert({
-          user_id: escrow.payee_id,
-          title: '❌ Job Cancelled',
-          message: providerArrived
-            ? `Job cancelled after arrival. Call-out fee: ${formatBudget(cancellationFee)}`
-            : 'The job has been cancelled. No charges applied.',
-          type: 'cancellation',
-          metadata: { job_id: jobId, cancellation_fee: cancellationFee },
-        }),
-      ];
-      await Promise.all(msgs);
 
       toast({
         title: 'Job cancelled',

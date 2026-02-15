@@ -1675,6 +1675,10 @@ export type Database = {
       }
       hold_escrow_funds: { Args: { _escrow_id: string }; Returns: Json }
       is_user_verified: { Args: { _user_id: string }; Returns: boolean }
+      process_escrow_cancellation: {
+        Args: { _escrow_id: string; _provider_arrived: boolean }
+        Returns: Json
+      }
       process_escrow_release: { Args: { _escrow_id: string }; Returns: Json }
     }
     Enums: {

@@ -12,10 +12,33 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Auth validation
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Verify caller
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { notification_id } = await req.json();
 
     if (!notification_id) {
@@ -33,9 +56,16 @@ serve(async (req) => {
       .maybeSingle();
 
     if (notifError || !notification) {
-      console.error("Notification not found:", notifError);
       return new Response(JSON.stringify({ error: "Notification not found" }), {
         status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Only the notification owner can trigger their own email
+    if (notification.user_id !== claimsData.claims.sub) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -56,7 +86,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!profile?.email) {
-      console.log("No email found for user:", notification.user_id);
       return new Response(JSON.stringify({ skipped: true, reason: "no_email" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -70,14 +99,10 @@ serve(async (req) => {
       });
     }
 
-    const userName = profile.account_type === 'company' 
-      ? (profile.company_name || profile.full_name) 
+    const userName = profile.account_type === 'company'
+      ? (profile.company_name || profile.full_name)
       : profile.full_name;
 
-    // Build job title from metadata
-    const jobTitle = notification.metadata?.job_title || "your job";
-
-    // Build email subject based on notification type
     const subjectMap: Record<string, string> = {
       job_application: "You have a new job application on QUT",
       job_accepted: "Your job has been accepted",
@@ -92,78 +117,88 @@ serve(async (req) => {
     };
 
     const subject = subjectMap[notification.type] || subjectMap.general;
-
-    // Determine action URL
-    const appUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "") || "";
     const jobId = notification.metadata?.job_id;
-    const viewUrl = jobId 
-      ? `https://taskit-all-done.lovable.app/my-jobs` 
+    const viewUrl = jobId
+      ? `https://taskit-all-done.lovable.app/my-jobs`
       : `https://taskit-all-done.lovable.app/profile?tab=alerts`;
 
-    // Build professional HTML email
-    const emailHtml = `
-<!DOCTYPE html>
+    const emailHtml = `<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background-color:#1a1a2e;padding:24px 32px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">QUT</h1>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 8px;color:#71717a;font-size:14px;">Hi ${userName},</p>
-              <h2 style="margin:0 0 16px;color:#18181b;font-size:18px;font-weight:600;">${notification.title}</h2>
-              <p style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.6;">${notification.message}</p>
-              <a href="${viewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">View Job</a>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:20px 32px;background-color:#fafafa;border-top:1px solid #e4e4e7;text-align:center;">
-              <p style="margin:0;color:#a1a1aa;font-size:12px;">QUT — Your trusted marketplace for services</p>
-              <p style="margin:4px 0 0;color:#a1a1aa;font-size:11px;">You received this because you have email notifications enabled.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr><td style="background-color:#1a1a2e;padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">QUT</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 8px;color:#71717a;font-size:14px;">Hi ${userName},</p>
+          <h2 style="margin:0 0 16px;color:#18181b;font-size:18px;font-weight:600;">${notification.title}</h2>
+          <p style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.6;">${notification.message}</p>
+          <a href="${viewUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;">View Job</a>
+        </td></tr>
+        <tr><td style="padding:20px 32px;background-color:#fafafa;border-top:1px solid #e4e4e7;text-align:center;">
+          <p style="margin:0;color:#a1a1aa;font-size:12px;">QUT — Your trusted marketplace for services</p>
+          <p style="margin:4px 0 0;color:#a1a1aa;font-size:11px;">You received this because you have email notifications enabled.</p>
+        </td></tr>
+      </table>
+    </td></tr>
   </table>
 </body>
 </html>`;
 
-    // Send email using Supabase Auth's built-in email (via admin API)
-    // Since we don't have a dedicated email service, we'll use the Supabase
-    // auth.admin.sendRawEmail or mark it for future integration
-    // For now, we log and mark as sent - actual email sending requires SMTP setup
-    console.log(`Email notification prepared for ${profile.email}: ${subject}`);
+    // Attempt real email delivery via Resend API (if configured)
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    let emailSent = false;
 
-    // Mark notification as email sent
+    if (resendApiKey) {
+      try {
+        const emailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: "QUT <notifications@taskit-all-done.lovable.app>",
+            to: [profile.email],
+            subject,
+            html: emailHtml,
+          }),
+        });
+
+        if (emailRes.ok) {
+          emailSent = true;
+          console.log(`Email sent to ${profile.email}: ${subject}`);
+        } else {
+          const errBody = await emailRes.text();
+          console.error(`Resend API error: ${emailRes.status} - ${errBody}`);
+        }
+      } catch (emailErr) {
+        console.error("Email delivery error:", emailErr);
+      }
+    } else {
+      console.log(`Email prepared for ${profile.email}: ${subject} (no RESEND_API_KEY configured)`);
+    }
+
+    // Mark notification as email processed (even if delivery failed, to prevent retries)
     await supabase
       .from("notifications")
       .update({
         delivery_method: "both",
-        is_email_sent: true,
-        email_sent_at: new Date().toISOString(),
+        is_email_sent: emailSent,
+        email_sent_at: emailSent ? new Date().toISOString() : null,
       } as any)
       .eq("id", notification_id);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         email: profile.email,
         subject,
-        note: "Email prepared. Configure SMTP for actual delivery." 
+        delivered: emailSent,
+        note: emailSent ? "Email delivered via Resend" : "Email prepared. Add RESEND_API_KEY secret for delivery.",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -229,15 +229,34 @@ const FindJobs = () => {
   const handleBargain = async () => {
     if (!bargainJob || !user || !bargainAmount) return;
     const wordCount = bargainReason.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount !== 70) {
-      toast({ title: 'Exactly 70 words required', description: `Your reason has ${wordCount} words. It must be exactly 70 words.`, variant: 'destructive' });
+    if (wordCount > 70) {
+      toast({ title: 'Too many words', description: `Your reason has ${wordCount} words. Maximum is 70 words.`, variant: 'destructive' });
+      return;
+    }
+    if (wordCount < 5) {
+      toast({ title: 'Reason too short', description: 'Please provide a meaningful reason (at least 5 words).', variant: 'destructive' });
       return;
     }
     setSubmittingBargain(true);
     try {
+      // Get the user's application for this job to use the correct application_id
+      const { data: myApp } = await supabase
+        .from('job_applications')
+        .select('id')
+        .eq('job_id', bargainJob.id)
+        .eq('provider_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!myApp) {
+        toast({ title: 'Apply first', description: 'You must apply to this job before negotiating.', variant: 'destructive' });
+        setSubmittingBargain(false);
+        return;
+      }
+
       const { error } = await supabase.from('negotiations').insert({
         job_id: bargainJob.id,
-        application_id: bargainJob.id,
+        application_id: myApp.id,
         initiator_id: user.id,
         responder_id: bargainJob.requester_id,
         original_price: Number(bargainJob.budget) || 0,
@@ -595,15 +614,20 @@ const FindJobs = () => {
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">
-                  Reason <span className="text-muted-foreground text-xs">(exactly 70 words required)</span>
+                  Reason <span className="text-muted-foreground text-xs">(max 70 words)</span>
                 </label>
                 <Textarea
                   placeholder="Why should the price change?"
                   value={bargainReason}
-                  onChange={(e) => setBargainReason(e.target.value)}
+                  onChange={(e) => {
+                    const words = e.target.value.trim().split(/\s+/).filter(Boolean);
+                    if (words.length <= 70) {
+                      setBargainReason(e.target.value);
+                    }
+                  }}
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className={`text-xs mt-1 ${bargainReason.trim().split(/\s+/).filter(Boolean).length > 70 ? 'text-destructive' : 'text-muted-foreground'}`}>
                   {bargainReason.trim().split(/\s+/).filter(Boolean).length}/70 words
                 </p>
               </div>
