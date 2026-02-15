@@ -278,14 +278,20 @@ const Profile = () => {
               ) : (
                 <>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-bold text-xl text-foreground">{displayName || 'User'}</h2>
+                    <h2 className="font-bold text-xl text-foreground">
+                      {isCompany 
+                        ? (profile.company_name || 'Complete Company Profile') 
+                        : (profile.full_name || 'User')}
+                    </h2>
                   </div>
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
                 </>
               )}
               <div className="flex items-center gap-2 mt-2">
-                <Badge variant={currentRole === 'requester' ? 'default' : 'secondary'}>
-                  {currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}
+                <Badge variant={isCompany ? 'outline' : currentRole === 'requester' ? 'default' : 'secondary'}>
+                  {isCompany ? (
+                    <span className="flex items-center gap-1"><Building2 className="w-3 h-3" /> Company</span>
+                  ) : currentRole === 'requester' ? 'Job Giver' : 'Service Provider'}
                 </Badge>
                 <VerificationBadge
                   status={profile.verification_status as any}
