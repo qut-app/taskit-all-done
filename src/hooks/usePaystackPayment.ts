@@ -40,19 +40,24 @@ export function usePaystackPayment() {
   };
 
   const initializePayment = async ({ amount, subscriptionType, onSuccess, onCancel }: PaystackPaymentOptions) => {
-    if (!user?.email || typeof user.email !== 'string') {
+    // === STEP 1: Validate email ===
+    if (!user?.email || typeof user.email !== 'string' || !user.email.includes('@')) {
+      console.error('[Paystack Debug] Invalid email:', user?.email);
       toast({ title: 'Error', description: 'Please log in to subscribe', variant: 'destructive' });
       return;
     }
 
-    // Validate amount is a real positive number
+    // === STEP 2: Validate amount ===
     const numericAmount = Number(amount);
-    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
+    if (!amount || isNaN(numericAmount) || numericAmount <= 0 || !Number.isFinite(numericAmount)) {
+      console.error('[Paystack Debug] Invalid amount:', { raw: amount, parsed: numericAmount });
       toast({ title: 'Error', description: 'Invalid payment amount', variant: 'destructive' });
       return;
     }
 
-    if (!subscriptionType) {
+    // === STEP 3: Validate subscription type ===
+    if (!subscriptionType || typeof subscriptionType !== 'string') {
+      console.error('[Paystack Debug] Invalid subscriptionType:', subscriptionType);
       toast({ title: 'Error', description: 'Please select a subscription plan', variant: 'destructive' });
       return;
     }
@@ -61,12 +66,33 @@ export function usePaystackPayment() {
     try {
       await loadPaystackScript();
 
+      // === STEP 4: Generate unique reference ===
       const reference = generateReference(user.id);
+
+      // === STEP 5: Convert to kobo (integer, no decimals) ===
       const amountInKobo = Math.round(numericAmount * 100);
 
-      console.log('Paystack payload:', { email: user.email, amount: amountInKobo, currency: 'NGN', reference, metadata: { subscription_type: subscriptionType } });
+      // === STEP 6: Full debug payload ===
+      const debugPayload = {
+        email: user.email,
+        amount_naira: numericAmount,
+        amount_kobo: amountInKobo,
+        amount_type: typeof amountInKobo,
+        currency: 'NGN',
+        reference,
+        subscription_type: subscriptionType,
+        user_id: user.id,
+      };
+      console.log('[Paystack Debug] Full payload before server call:', JSON.stringify(debugPayload, null, 2));
 
-      // Initialize transaction server-side
+      // Final guard
+      if (amountInKobo < 100) {
+        console.error('[Paystack Debug] Amount too small:', amountInKobo, 'kobo');
+        toast({ title: 'Error', description: 'Minimum payment is ₦1', variant: 'destructive' });
+        return;
+      }
+
+      // === STEP 7: Server-side initialization ===
       const { data, error } = await supabase.functions.invoke('initialize-subscription', {
         body: {
           amount: amountInKobo,
@@ -76,6 +102,8 @@ export function usePaystackPayment() {
         },
       });
 
+      console.log('[Paystack Debug] Server response:', JSON.stringify(data), 'Error:', error);
+
       if (error) {
         throw new Error('Unable to initialize payment. Please try again.');
       }
@@ -84,10 +112,13 @@ export function usePaystackPayment() {
       const publicKey = data?.public_key;
 
       if (!accessCode || !publicKey) {
+        console.error('[Paystack Debug] Missing access_code or public_key:', { accessCode: !!accessCode, publicKey: !!publicKey });
         throw new Error('Payment setup incomplete. Please try again later.');
       }
 
-      // Open Paystack popup - do NOT pass amount when using access_code
+      console.log('[Paystack Debug] Opening popup with:', { key: publicKey?.substring(0, 10) + '...', access_code: accessCode?.substring(0, 10) + '...', ref: reference });
+
+      // === STEP 8: Open popup — NO amount when using access_code ===
       const popup = new window.PaystackPop();
       popup.newTransaction({
         key: publicKey,
@@ -95,17 +126,18 @@ export function usePaystackPayment() {
         email: user.email,
         ref: reference,
         onSuccess: (transaction: any) => {
+          console.log('[Paystack Debug] Payment success:', transaction);
           toast({ title: 'Payment successful!', description: 'Your subscription is now active.' });
           onSuccess?.(transaction.reference || reference);
         },
         onCancel: () => {
+          console.log('[Paystack Debug] Payment cancelled by user');
           toast({ title: 'Payment cancelled', description: 'You can try again anytime.' });
           onCancel?.();
         },
       });
     } catch (err: any) {
-      console.error('Payment error:', err);
-      // Show user-friendly error, never raw Paystack errors
+      console.error('[Paystack Debug] Payment error:', err);
       const message = err.message?.includes('Paystack') || err.message?.includes('invalid')
         ? 'Unable to process payment. Please check your details and try again.'
         : err.message || 'Failed to initialize payment';

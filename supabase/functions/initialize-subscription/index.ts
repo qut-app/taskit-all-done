@@ -11,15 +11,21 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, email, reference, subscription_type } = await req.json();
+    const body = await req.json();
+    const { amount, email, reference, subscription_type } = body;
 
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      throw new Error("Invalid amount");
+    console.log('[Paystack Server Debug] Received:', JSON.stringify({ amount, email, reference, subscription_type, amount_type: typeof amount }));
+
+    if (!amount || typeof amount !== 'number' || amount <= 0 || !Number.isFinite(amount)) {
+      console.error('[Paystack Server Debug] Invalid amount:', amount, typeof amount);
+      throw new Error(`Invalid amount: ${amount} (${typeof amount})`);
     }
     if (!email || typeof email !== 'string' || !email.includes('@')) {
+      console.error('[Paystack Server Debug] Invalid email:', email);
       throw new Error("Invalid email address");
     }
     if (!reference || typeof reference !== 'string') {
+      console.error('[Paystack Server Debug] Invalid reference:', reference);
       throw new Error("Invalid reference");
     }
 
@@ -30,6 +36,18 @@ serve(async (req) => {
 
     const paystackPublicKey = Deno.env.get("PAYSTACK_PUBLIC_KEY");
 
+    const paystackPayload = {
+      amount: Math.round(amount), // ensure integer
+      email,
+      reference,
+      currency: "NGN",
+      metadata: {
+        subscription_type,
+      },
+    };
+
+    console.log('[Paystack Server Debug] Sending to Paystack API:', JSON.stringify(paystackPayload));
+
     // Initialize transaction with Paystack
     const response = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -37,18 +55,12 @@ serve(async (req) => {
         Authorization: `Bearer ${paystackSecretKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        amount, // already in kobo
-        email,
-        reference,
-        currency: "NGN",
-        metadata: {
-          subscription_type,
-        },
-      }),
+      body: JSON.stringify(paystackPayload),
     });
 
     const data = await response.json();
+
+    console.log('[Paystack Server Debug] Paystack response:', JSON.stringify(data));
 
     if (!data.status) {
       throw new Error(data.message || "Failed to initialize Paystack transaction");
