@@ -13,9 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { VerificationBadge } from '@/components/ui/VerificationBadge';
 import MobileLayout from '@/components/navigation/MobileLayout';
+import CompanyLayout from '@/components/navigation/CompanyLayout';
 import { useSocialFeed, usePostComments, FeedPost } from '@/hooks/useSocialFeed';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useCompanySubscription } from '@/hooks/useCompanySubscription';
 import { useFavourites } from '@/hooks/useFavourites';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,12 +28,17 @@ const Feed = () => {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { posts, loading, createPost, toggleLike, deletePost } = useSocialFeed();
+  const { isGated: companyIsGated } = useCompanySubscription();
   const { toast } = useToast();
   const [newContent, setNewContent] = useState('');
   const [posting, setPosting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
+
+  const isCompanyAccount = (profile as any)?.account_type === 'company';
+  const canPost = !isCompanyAccount || !companyIsGated;
+  const Layout = isCompanyAccount ? CompanyLayout : MobileLayout;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePost = async () => {
@@ -87,63 +94,72 @@ const Feed = () => {
 
   if (!user) {
     return (
-      <MobileLayout>
+      <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <Button onClick={() => navigate('/auth')}>Sign in to view feed</Button>
         </div>
-      </MobileLayout>
+      </Layout>
     );
   }
 
   return (
-    <MobileLayout>
+    <Layout>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border p-4">
         <h1 className="text-xl font-bold text-foreground">🔥 Feed</h1>
       </header>
 
       <div className="p-4 space-y-4">
         {/* Compose */}
-        <Card className="p-4">
-          <div className="flex gap-3">
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={(profile as any)?.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                {profile?.full_name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-2">
-              <Textarea
-                placeholder="What's happening?"
-                value={newContent}
-                onChange={e => setNewContent(e.target.value)}
-                className="min-h-[60px] resize-none border-0 p-0 focus-visible:ring-0 text-sm"
-              />
-              {imagePreview && (
-                <div className="relative inline-block">
-                  <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-lg object-cover" />
-                  <button
-                    onClick={() => { setImageFile(null); setImagePreview(null); }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <div className="flex gap-2">
-                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" className="hidden" onChange={handleImageSelect} />
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}>
-                    <ImageIcon className="w-4 h-4 text-primary" />
+        {canPost ? (
+          <Card className="p-4">
+            <div className="flex gap-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={(profile as any)?.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                  {profile?.full_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-2">
+                <Textarea
+                  placeholder="What's happening?"
+                  value={newContent}
+                  onChange={e => setNewContent(e.target.value)}
+                  className="min-h-[60px] resize-none border-0 p-0 focus-visible:ring-0 text-sm"
+                />
+                {imagePreview && (
+                  <div className="relative inline-block">
+                    <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-lg object-cover" />
+                    <button
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t border-border">
+                  <div className="flex gap-2">
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4" className="hidden" onChange={handleImageSelect} />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => fileInputRef.current?.click()}>
+                      <ImageIcon className="w-4 h-4 text-primary" />
+                    </Button>
+                  </div>
+                  <Button size="sm" onClick={handlePost} disabled={posting || (!newContent.trim() && !imageFile)}>
+                    {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    <span className="ml-1">Post</span>
                   </Button>
                 </div>
-                <Button size="sm" onClick={handlePost} disabled={posting || (!newContent.trim() && !imageFile)}>
-                  {posting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  <span className="ml-1">Post</span>
-                </Button>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        ) : isCompanyAccount ? (
+          <Card className="p-4">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">Subscribe to a plan to create posts</p>
+              <Button size="sm" onClick={() => navigate('/company/upgrade')}>Upgrade Now</Button>
+            </div>
+          </Card>
+        ) : null}
 
         {/* Feed */}
         {loading ? (
@@ -177,7 +193,7 @@ const Feed = () => {
           </AnimatePresence>
         )}
       </div>
-    </MobileLayout>
+    </Layout>
   );
 };
 
