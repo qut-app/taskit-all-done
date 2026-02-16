@@ -829,6 +829,35 @@ export type Database = {
           },
         ]
       }
+      post_saves: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_saves_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           ad_status: string | null
@@ -839,6 +868,8 @@ export type Database = {
           id: string
           image_url: string | null
           is_boosted: boolean | null
+          repost_caption: string | null
+          repost_of: string | null
           updated_at: string
           user_id: string
           video_url: string | null
@@ -852,6 +883,8 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_boosted?: boolean | null
+          repost_caption?: string | null
+          repost_of?: string | null
           updated_at?: string
           user_id: string
           video_url?: string | null
@@ -865,11 +898,21 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_boosted?: boolean | null
+          repost_caption?: string | null
+          repost_of?: string | null
           updated_at?: string
           user_id?: string
           video_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "posts_repost_of_fkey"
+            columns: ["repost_of"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing_plans: {
         Row: {

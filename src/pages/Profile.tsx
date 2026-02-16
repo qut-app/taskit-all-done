@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Star, CheckCircle, AlertCircle, ChevronRight, RefreshCw, MapPin, Building2,
   Edit3, Camera, Loader2, LogOut, Heart, Users, Megaphone, CreditCard,
-  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Trophy, Mail, Volume2
+  HelpCircle, Bell, Shield, Copy, Share2, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, Trophy, Mail, Volume2, Bookmark
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,6 +34,7 @@ import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { SUBSCRIPTION_PLANS, formatNaira } from '@/config/subscriptionConfig';
+import { useSavedPosts } from '@/hooks/useSocialFeed';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ const Profile = () => {
   const { initializePayment, loading: paymentLoading } = usePaystackPayment();
   const { submitFeedback, submitting: feedbackSubmitting, canSubmit: canSubmitFeedback, FEEDBACK_CATEGORIES } = useFeedback();
   const { soundEnabled, emailEnabled, updatePreference } = useNotificationPreferences();
+  const { savedPosts, loading: savedLoading, unsave } = useSavedPosts();
 
   const [isEditing, setIsEditing] = useState(false);
   const [feedbackCategory, setFeedbackCategory] = useState('');
@@ -386,6 +388,7 @@ const Profile = () => {
             <TabsList className="w-max gap-1 bg-muted/50 px-1">
               <TabsTrigger value="profile" className="text-xs">Profile</TabsTrigger>
               <TabsTrigger value="foryou" className="text-xs">For You</TabsTrigger>
+              <TabsTrigger value="saved" className="text-xs">Saved Posts</TabsTrigger>
               <TabsTrigger value="favourites" className="text-xs">Favorites</TabsTrigger>
               <TabsTrigger value="referrals" className="text-xs">Referrals</TabsTrigger>
               <TabsTrigger value="wallet" className="text-xs">Wallet</TabsTrigger>
@@ -566,6 +569,50 @@ const Profile = () => {
                 )}
               </div>
             </Card>
+          </TabsContent>
+
+          {/* ===== SAVED POSTS TAB ===== */}
+          <TabsContent value="saved" className="space-y-3">
+            {savedLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : savedPosts.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">No saved posts yet</p>
+                <p className="text-xs text-muted-foreground mt-1">Bookmark posts from the feed to find them here</p>
+              </Card>
+            ) : (
+              savedPosts.map((post) => (
+                <Card key={post.id} className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={post.author_avatar || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {post.author_name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-semibold text-foreground">{post.author_name}</span>
+                        {post.is_edited && <span className="text-[9px] text-muted-foreground italic">• Edited</span>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                      </p>
+                      {post.content && (
+                        <p className="text-sm text-foreground mt-1 line-clamp-3">{post.content}</p>
+                      )}
+                      {post.image_url && (
+                        <img src={post.image_url} alt="" className="w-full h-32 object-cover rounded-md mt-2" loading="lazy" />
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => unsave(post.id)} className="text-primary shrink-0">
+                      <Bookmark className="w-4 h-4 fill-current" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           {/* ===== FAVOURITES TAB ===== */}
