@@ -22,6 +22,7 @@ import { useFavourites } from '@/hooks/useFavourites';
 import UpgradeRequiredDialog from '@/components/company/UpgradeRequiredDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { trackEvent } from '@/hooks/useAnalytics';
 import { formatDistanceToNow } from 'date-fns';
 
 const Feed = () => {
@@ -85,6 +86,11 @@ const Feed = () => {
   };
 
   const handleShare = (post: FeedPost) => {
+    trackEvent('feed_share', {
+      target_id: post.user_id,
+      category: 'feed',
+      metadata: { post_id: post.id, categories: post.author_categories },
+    });
     if (navigator.share) {
       navigator.share({ title: 'Check this out on QUT', text: post.content || '', url: window.location.origin });
     } else {
