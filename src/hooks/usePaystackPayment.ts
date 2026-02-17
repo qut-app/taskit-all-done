@@ -124,6 +124,8 @@ export function usePaystackPayment() {
         key: publicKey,
         access_code: accessCode,
         email: user.email,
+        amount: amountInKobo,
+        currency: 'NGN',
         ref: reference,
         onSuccess: (transaction: any) => {
           console.log('[Paystack Debug] Payment success:', transaction);
