@@ -130,7 +130,10 @@ export function usePaystackPayment() {
         onSuccess: (transaction: any) => {
           console.log('[Paystack Debug] Payment success:', transaction);
           toast({ title: 'Payment successful!', description: 'Your subscription is now active.' });
-          onSuccess?.(transaction.reference || reference);
+          // Small delay to allow webhook to process, then trigger callback
+          setTimeout(() => {
+            onSuccess?.(transaction.reference || reference);
+          }, 2000);
         },
         onCancel: () => {
           console.log('[Paystack Debug] Payment cancelled by user');
