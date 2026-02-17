@@ -31,6 +31,7 @@ import ShowcaseFeed from '@/components/dashboard/ShowcaseFeed';
 import { VerificationBadge, VerificationStatus } from '@/components/ui/VerificationBadge';
 import { NotificationsSheet } from '@/components/notifications/NotificationsSheet';
 import { SUBSCRIPTION_PLANS, formatNaira } from '@/config/subscriptionConfig';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ const Dashboard = () => {
   const { isAdmin } = useAdmin();
   const { providers: recommendedExperts, loading: recommendedLoading } = useRecommendedProviders();
   const { items: feedItems, loading: feedLoading, toggleLike } = useShowcaseFeed();
+  const { isPremium, subscriptionType } = useSubscriptionStatus();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -150,7 +152,7 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Requester Upgrade Banner */}
-      {requesterMaxSlots <= 3 && (
+      {requesterMaxSlots <= 3 && !isPremium && (
         <motion.div variants={cardVariants} custom={2}>
           <Card className="p-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
             <div className="flex items-center gap-3">
@@ -312,7 +314,7 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Upgrade Banner */}
-      {!providerProfile?.is_premium && (
+      {!providerProfile?.is_premium && !isPremium && (
         <motion.div variants={cardVariants} custom={2}>
           <Card className="p-4 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
             <div className="flex items-center gap-3">
@@ -407,6 +409,12 @@ const Dashboard = () => {
                   accountType={isCompany ? 'company' : 'individual'}
                   size="sm"
                 />
+                {isPremium && (
+                  <Badge className="bg-gradient-to-r from-amber-500 to-yellow-400 text-white border-0 text-[10px] px-1.5 py-0.5 font-semibold">
+                    <Zap className="w-3 h-3 mr-0.5" />
+                    PRO
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
