@@ -118,10 +118,46 @@ serve(async (req) => {
     } else {
       // Check if this is a subscription payment
       const subscriptionType = metadata?.subscription_type;
-      if (subscriptionType) {
-        // Find the user by the reference pattern or metadata
-        console.log(`Subscription payment verified: ${reference}, type: ${subscriptionType}`);
-        // Subscription handling is done client-side after Paystack popup success
+      if (subscriptionType && reference?.startsWith('sub_')) {
+        // Extract user_id from reference pattern: sub_{userId}_{timestamp}
+        const parts = reference.split('_');
+        // userId is parts[1] through parts[5] (UUID has 5 parts separated by -)
+        // Reference format: sub_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx_timestamp
+        const userId = parts.slice(1, -1).join('_');
+        
+        console.log(`Subscription payment verified: ${reference}, type: ${subscriptionType}, user: ${userId}`);
+
+        // Calculate expiry (30 days from now)
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        // Insert subscription record
+        const { error: subError } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: userId,
+            subscription_type: subscriptionType,
+            amount: amount / 100, // Convert kobo back to naira
+            started_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+            status: 'active',
+          });
+
+        if (subError) {
+          console.error('Subscription insert error:', subError);
+          throw new Error('Failed to create subscription record');
+        }
+
+        // Notify user
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          title: '🎉 Subscription Activated',
+          message: `Your ${subscriptionType === 'requester_unlimited' ? 'Unlimited Hiring' : 'Pro Service Provider'} plan is now active!`,
+          type: 'subscription',
+          metadata: { subscription_type: subscriptionType, reference },
+        });
+
+        console.log(`Subscription created for user ${userId}, expires ${expiresAt.toISOString()}`);
       }
     }
 
