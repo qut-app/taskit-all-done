@@ -66,6 +66,17 @@ export function useProfile(): UseProfileReturn {
     fetchProfile();
   }, [user]);
 
+  // Realtime: auto-refresh when own profile or provider profile changes
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('profile-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('Not authenticated') };
 

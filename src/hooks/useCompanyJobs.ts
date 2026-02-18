@@ -70,6 +70,16 @@ export function useCompanyJobs() {
     fetchJobs();
   }, [fetchJobs]);
 
+  // Realtime: auto-refresh when jobs change
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('company-jobs-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs', filter: `requester_id=eq.${user.id}` }, () => { fetchJobs(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchJobs]);
+
   const updateFilters = (newFilters: CompanyJobFilters) => {
     setFilters(newFilters);
   };

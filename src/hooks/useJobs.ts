@@ -95,6 +95,16 @@ export function useJobs() {
     fetchJobs();
   }, [user]);
 
+  // Realtime subscriptions for jobs and applications
+  useEffect(() => {
+    const jobsChannel = supabase
+      .channel('jobs-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => { fetchJobs(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_applications' }, () => { fetchJobs(); })
+      .subscribe();
+    return () => { supabase.removeChannel(jobsChannel); };
+  }, [user]);
+
   const createJob = async (data: Partial<Job>) => {
     if (!user) return { error: new Error('Not authenticated') };
 
