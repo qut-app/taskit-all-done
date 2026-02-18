@@ -81,6 +81,16 @@ export function useProviders(options: UseProvidersOptions = {}) {
     fetchProviders();
   }, [options.category, options.serviceMode, options.minRating, options.sortBy]);
 
+  // Realtime: auto-refresh when provider profiles or profiles change
+  useEffect(() => {
+    const channel = supabase
+      .channel('providers-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_profiles' }, () => { fetchProviders(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { fetchProviders(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [options.category, options.serviceMode, options.minRating, options.sortBy]);
+
   return { providers, loading, refetch: fetchProviders };
 }
 

@@ -412,6 +412,15 @@ export function usePostComments(postId: string) {
 
   useEffect(() => { fetchComments(); }, [fetchComments]);
 
+  // Realtime: auto-refresh comments
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comments-realtime-${postId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments', filter: `post_id=eq.${postId}` }, () => { fetchComments(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [postId, fetchComments]);
+
   const addComment = async (content: string) => {
     if (!user || !content.trim()) return;
     await supabase.from('post_comments').insert({ post_id: postId, user_id: user.id, content: content.trim() });
