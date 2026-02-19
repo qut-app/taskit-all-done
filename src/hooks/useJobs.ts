@@ -17,9 +17,11 @@ export function useJobs() {
   const [myJobs, setMyJobs] = useState<JobWithRequester[]>([]);
   const [myApplications, setMyApplications] = useState<(JobApplication & { job?: Job })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone] = useState({ current: false });
 
   const fetchJobs = async () => {
-    setLoading(true);
+    // Only show loading on initial fetch, not background refreshes
+    if (!initialLoadDone.current) setLoading(true);
     try {
       // Fetch all open jobs only (accepted/in_progress jobs are hidden from discovery)
       const { data: jobsData } = await supabase
@@ -88,6 +90,7 @@ export function useJobs() {
       console.error('Error fetching jobs:', err);
     } finally {
       setLoading(false);
+      initialLoadDone.current = true;
     }
   };
 

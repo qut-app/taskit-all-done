@@ -307,8 +307,8 @@ const Dashboard = () => {
               width: `${((providerProfile?.active_job_slots || 0) / (providerProfile?.max_job_slots || 3)) * 100}%`
             }} />
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {(providerProfile?.max_job_slots || 3) - (providerProfile?.active_job_slots || 0)} slots remaining · 3 free slots/month
+           <p className="text-xs text-muted-foreground mt-2">
+             {(providerProfile?.max_job_slots || 3) - (providerProfile?.active_job_slots || 0)} slots remaining · {isPremium ? '15 premium' : '3 free'} slots
           </p>
         </Card>
       </motion.div>

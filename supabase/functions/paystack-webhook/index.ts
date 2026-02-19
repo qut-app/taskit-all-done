@@ -148,11 +148,24 @@ serve(async (req) => {
           throw new Error('Failed to create subscription record');
         }
 
+        // Upgrade slot limits for premium users
+        if (subscriptionType === 'provider_slot_boost') {
+          await supabase
+            .from('provider_profiles')
+            .update({ max_job_slots: 15 })
+            .eq('user_id', userId);
+        } else if (subscriptionType === 'requester_unlimited') {
+          await supabase
+            .from('profiles')
+            .update({ requester_max_slots: 99 })
+            .eq('user_id', userId);
+        }
+
         // Notify user
         await supabase.from('notifications').insert({
           user_id: userId,
           title: '🎉 Subscription Activated',
-          message: `Your ${subscriptionType === 'requester_unlimited' ? 'Unlimited Hiring' : 'Pro Service Provider'} plan is now active!`,
+          message: `Your ${subscriptionType === 'requester_unlimited' ? 'Unlimited Hiring' : 'Pro Service Provider'} plan is now active! Your job slots have been upgraded.`,
           type: 'subscription',
           metadata: { subscription_type: subscriptionType, reference },
         });
