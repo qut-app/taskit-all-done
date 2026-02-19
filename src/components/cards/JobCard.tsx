@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, DollarSign, User, Pencil, Scale, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ const JobCard = ({
   job, variant = 'default', showActions = true, isOwner = false, 
   onView, onApply, onEdit, onBargain, showBargainHint, applicationStatus 
 }: JobCardProps) => {
+  const navigate = useNavigate();
   const statusColors = {
     open: 'success',
     assigned: 'warning',
@@ -118,7 +120,7 @@ const JobCard = ({
       {showActions && job.status === 'open' && (
         <div className="space-y-2 mt-4">
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={onView}>
+            <Button variant="outline" className="flex-1" onClick={() => navigate(`/job/${job.id}`)}>
               View Details
             </Button>
             {applicationStatus === 'applied' ? (

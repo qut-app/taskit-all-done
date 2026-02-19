@@ -23,8 +23,9 @@ export function useProfile(): UseProfileReturn {
   const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const initialLoadDone = useState(false);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (isBackground = false) => {
     if (!user) {
       setProfile(null);
       setProviderProfile(null);
@@ -33,7 +34,10 @@ export function useProfile(): UseProfileReturn {
     }
 
     try {
-      setLoading(true);
+      // Only show loading spinner on initial fetch, not background refreshes
+      if (!isBackground && !initialLoadDone[0]) {
+        setLoading(true);
+      }
       
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
@@ -59,6 +63,7 @@ export function useProfile(): UseProfileReturn {
       setError(err as Error);
     } finally {
       setLoading(false);
+      initialLoadDone[0] = true;
     }
   };
 
@@ -71,8 +76,8 @@ export function useProfile(): UseProfileReturn {
     if (!user) return;
     const channel = supabase
       .channel('profile-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(true); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'provider_profiles', filter: `user_id=eq.${user.id}` }, () => { fetchProfile(true); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);

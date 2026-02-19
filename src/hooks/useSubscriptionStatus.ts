@@ -13,6 +13,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
   const [isPremium, setIsPremium] = useState(false);
   const [subscriptionType, setSubscriptionType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone] = useState({ current: false });
 
   const checkSubscription = useCallback(async () => {
     if (!user) {
@@ -22,6 +23,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
       return;
     }
     try {
+      if (!initialLoadDone.current) setLoading(true);
       const { data } = await supabase
         .from('subscriptions')
         .select('subscription_type, status, expires_at')
@@ -43,6 +45,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
       setIsPremium(false);
     } finally {
       setLoading(false);
+      initialLoadDone.current = true;
     }
   }, [user]);
 
