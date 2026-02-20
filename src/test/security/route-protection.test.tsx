@@ -2,8 +2,6 @@
  * Route Protection Regression Tests
  * 
  * Verifies that all protected routes are wrapped with AuthGuard or AdminGuard.
- * This is a structural test that ensures the App.tsx route configuration
- * hasn't regressed.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -11,7 +9,7 @@ import * as path from "path";
 
 describe("Route Protection Configuration", () => {
   const appTsxContent = fs.readFileSync(
-    path.resolve(__dirname, "../../App.tsx"),
+    path.resolve(process.cwd(), "src/App.tsx"),
     "utf-8"
   );
 
@@ -32,7 +30,6 @@ describe("Route Protection Configuration", () => {
 
   protectedRoutes.forEach((route) => {
     it(`route "${route}" should be wrapped with AuthGuard`, () => {
-      // Find the route definition line
       const routePattern = new RegExp(
         `path="${route.replace("/", "\\/")}".*<AuthGuard>`
       );
@@ -50,7 +47,6 @@ describe("Route Protection Configuration", () => {
   });
 
   it("public routes should NOT be wrapped with AuthGuard", () => {
-    // Landing and Auth pages should be publicly accessible
     const landingRoute = /path="\/"[^>]*element={<Landing/;
     const authRoute = /path="\/auth"[^>]*element={<Auth/;
     expect(appTsxContent).toMatch(landingRoute);
