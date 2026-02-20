@@ -1767,6 +1767,10 @@ export type Database = {
         Returns: boolean
       }
       hold_escrow_funds: { Args: { _escrow_id: string }; Returns: Json }
+      increment_ad_counter: {
+        Args: { _ad_id: string; _field: string }
+        Returns: undefined
+      }
       is_user_verified: { Args: { _user_id: string }; Returns: boolean }
       process_escrow_cancellation: {
         Args: { _escrow_id: string; _provider_arrived: boolean }
