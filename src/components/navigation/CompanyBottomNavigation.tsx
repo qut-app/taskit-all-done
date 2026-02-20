@@ -6,9 +6,9 @@ const CompanyBottomNavigation = () => {
   const location = useLocation();
 
   const items = [
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Home, label: 'Home', path: '/company-dashboard' },
     { icon: Search, label: 'Discover', path: '/discover' },
-    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];

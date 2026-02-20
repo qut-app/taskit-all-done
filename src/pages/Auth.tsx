@@ -29,7 +29,6 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && !authLoading) {
-      // Check profile completeness before redirecting
       const checkOnboarding = async () => {
         const { data: profile } = await supabase
           .from('profiles')
@@ -42,7 +41,7 @@ const Auth = () => {
         } else if (profile.account_type === 'individual' && !profile.gender) {
           navigate('/onboarding');
         } else {
-          navigate('/dashboard');
+          navigate('/feed');
         }
       };
       checkOnboarding();
