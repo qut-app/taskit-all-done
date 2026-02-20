@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AppProvider } from "@/context/AppContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AuthGuard from "@/components/AuthGuard";
+import OnboardingGuard from "@/components/OnboardingGuard";
 import AdminGuard from "@/components/AdminGuard";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
@@ -43,17 +44,17 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<AuthGuard><Onboarding /></AuthGuard>} />
                 <Route path="/role-select" element={<AuthGuard><RoleSelect /></AuthGuard>} />
-                <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
-                <Route path="/company-dashboard" element={<AuthGuard><CompanyDashboard /></AuthGuard>} />
-                <Route path="/company/upgrade" element={<AuthGuard><CompanyUpgrade /></AuthGuard>} />
-                <Route path="/discover" element={<AuthGuard><Discover /></AuthGuard>} />
-                <Route path="/view-profile/:userId" element={<AuthGuard><ViewProfile /></AuthGuard>} />
-                <Route path="/job/:jobId" element={<AuthGuard><JobDetails /></AuthGuard>} />
-                <Route path="/find-jobs" element={<AuthGuard><FindJobs /></AuthGuard>} />
-                <Route path="/post-job" element={<AuthGuard><PostJob /></AuthGuard>} />
-                <Route path="/my-jobs" element={<AuthGuard><MyJobs /></AuthGuard>} />
-                <Route path="/profile" element={<AuthGuard><Profile /></AuthGuard>} />
-                <Route path="/feed" element={<AuthGuard><Feed /></AuthGuard>} />
+                <Route path="/dashboard" element={<AuthGuard><OnboardingGuard><Dashboard /></OnboardingGuard></AuthGuard>} />
+                <Route path="/company-dashboard" element={<AuthGuard><OnboardingGuard><CompanyDashboard /></OnboardingGuard></AuthGuard>} />
+                <Route path="/company/upgrade" element={<AuthGuard><OnboardingGuard><CompanyUpgrade /></OnboardingGuard></AuthGuard>} />
+                <Route path="/discover" element={<AuthGuard><OnboardingGuard><Discover /></OnboardingGuard></AuthGuard>} />
+                <Route path="/view-profile/:userId" element={<AuthGuard><OnboardingGuard><ViewProfile /></OnboardingGuard></AuthGuard>} />
+                <Route path="/job/:jobId" element={<AuthGuard><OnboardingGuard><JobDetails /></OnboardingGuard></AuthGuard>} />
+                <Route path="/find-jobs" element={<AuthGuard><OnboardingGuard><FindJobs /></OnboardingGuard></AuthGuard>} />
+                <Route path="/post-job" element={<AuthGuard><OnboardingGuard><PostJob /></OnboardingGuard></AuthGuard>} />
+                <Route path="/my-jobs" element={<AuthGuard><OnboardingGuard><MyJobs /></OnboardingGuard></AuthGuard>} />
+                <Route path="/profile" element={<AuthGuard><OnboardingGuard><Profile /></OnboardingGuard></AuthGuard>} />
+                <Route path="/feed" element={<AuthGuard><OnboardingGuard><Feed /></OnboardingGuard></AuthGuard>} />
                 <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

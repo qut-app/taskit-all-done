@@ -1,12 +1,36 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Users, Briefcase, Shield, Zap, Building2, User, Star, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  // If user is already authenticated (e.g. Google OAuth redirect), route them properly
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const checkAndRedirect = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed, account_type, active_role, location, gender')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!profile || !profile.onboarding_completed || !profile.account_type || !profile.active_role || !profile.location ||
+          (profile.account_type === 'individual' && !profile.gender)) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
+    };
+    checkAndRedirect();
+  }, [user, authLoading, navigate]);
 
   const features = [
     {
