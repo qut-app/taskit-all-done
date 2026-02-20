@@ -26,7 +26,7 @@ const Landing = () => {
           (profile.account_type === 'individual' && !profile.gender)) {
         navigate('/onboarding');
       } else {
-        navigate('/dashboard');
+        navigate('/feed');
       }
     };
     checkAndRedirect();

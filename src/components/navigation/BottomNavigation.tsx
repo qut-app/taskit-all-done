@@ -8,17 +8,17 @@ const BottomNavigation = () => {
   const { currentRole } = useApp();
 
   const requesterItems = [
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Discover', path: '/discover' },
-    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];
 
   const providerItems = [
+    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Search, label: 'Find Jobs', path: '/find-jobs' },
-    { icon: Flame, label: 'Feed', path: '/feed' },
     { icon: Briefcase, label: 'My Jobs', path: '/my-jobs' },
     { icon: User, label: 'Profile', path: '/profile' },
   ];

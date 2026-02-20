@@ -247,7 +247,7 @@ const Onboarding = () => {
       }
 
       toast({ title: 'Profile submitted!', description: 'Your verification is under review.' });
-      navigate('/dashboard');
+      navigate('/feed');
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to complete onboarding', variant: 'destructive' });
     } finally {
