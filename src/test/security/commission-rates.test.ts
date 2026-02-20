@@ -11,42 +11,40 @@ import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-// Helper to read file content
-const readFile = (filePath: string) =>
-  fs.readFileSync(path.resolve(__dirname, filePath), "utf-8");
+// Helper to read file content - resolve from project root
+const readFile = (filePath: string) => {
+  const resolved = path.resolve(process.cwd(), filePath);
+  return fs.readFileSync(resolved, "utf-8");
+};
 
 describe("Commission Rate Configuration", () => {
   it("MyJobs.tsx should use 0.12 for free users (not 0.20)", () => {
-    const content = readFile("../../pages/MyJobs.tsx");
-    // Should contain 0.12 for free rate
+    const content = readFile("src/pages/MyJobs.tsx");
     expect(content).toContain("0.12");
-    // Should NOT contain old 0.20 rate
     expect(content).not.toMatch(/isPaid\s*\?\s*0\.05\s*:\s*0\.20/);
   });
 
   it("MyJobs.tsx should use 0.05 for paid users", () => {
-    const content = readFile("../../pages/MyJobs.tsx");
+    const content = readFile("src/pages/MyJobs.tsx");
     expect(content).toContain("0.05");
   });
 
   it("MyJobs.tsx UI should display 12% and 5% labels", () => {
-    const content = readFile("../../pages/MyJobs.tsx");
+    const content = readFile("src/pages/MyJobs.tsx");
     expect(content).toContain("'12%'");
     expect(content).toContain("'5%'");
-    // Should NOT show old 20% or 9%
     expect(content).not.toContain("'20%'");
     expect(content).not.toContain("'9%'");
   });
 
   it("no source file should contain old 0.20 commission rate in commission context", () => {
-    const myJobs = readFile("../../pages/MyJobs.tsx");
-    // Ensure no isPaid ternary with 0.20
+    const myJobs = readFile("src/pages/MyJobs.tsx");
     const oldPattern = /isPaid\s*\?\s*[\d.]+\s*:\s*0\.20/;
     expect(myJobs).not.toMatch(oldPattern);
   });
 
   it("no source file should contain old 0.09 commission rate", () => {
-    const myJobs = readFile("../../pages/MyJobs.tsx");
+    const myJobs = readFile("src/pages/MyJobs.tsx");
     expect(myJobs).not.toContain("0.09");
   });
 });
@@ -77,22 +75,18 @@ describe("Commission Math Integrity", () => {
     const amount = 50000;
     const commission = Math.round(amount * FREE_RATE);
     expect(commission).toBe(6000);
-    expect(commission + (amount - commission)).toBe(amount);
   });
 
   it("paid provider: ₦50,000 job → ₦2,500 commission", () => {
     const amount = 50000;
     const commission = Math.round(amount * PAID_RATE);
     expect(commission).toBe(2500);
-    expect(commission + (amount - commission)).toBe(amount);
   });
 
   it("escrow holds FULL amount (commission deducted only at payout)", () => {
     const amount = 25000;
-    // Escrow holds full amount — no deduction at hold time
     const escrowHeld = amount;
     expect(escrowHeld).toBe(amount);
-    // Commission only applied at release
     const commission = Math.round(amount * FREE_RATE);
     const payout = amount - commission;
     expect(escrowHeld).toBe(commission + payout);
@@ -100,7 +94,6 @@ describe("Commission Math Integrity", () => {
 
   it("cancellation before completion returns full amount (no commission)", () => {
     const amount = 15000;
-    // On cancellation, full amount is refunded (minus call-out fee if applicable)
     const refundNoArrival = amount;
     expect(refundNoArrival).toBe(amount);
   });

@@ -47,6 +47,41 @@ export type Database = {
         }
         Relationships: []
       }
+      ad_events: {
+        Row: {
+          ad_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_events_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ads: {
         Row: {
           ad_type: string | null
@@ -63,6 +98,7 @@ export type Database = {
           link_url: string | null
           location_targeting: string | null
           paystack_reference: string | null
+          reach: number | null
           reject_reason: string | null
           spend_amount: number | null
           start_date: string | null
@@ -85,6 +121,7 @@ export type Database = {
           link_url?: string | null
           location_targeting?: string | null
           paystack_reference?: string | null
+          reach?: number | null
           reject_reason?: string | null
           spend_amount?: number | null
           start_date?: string | null
@@ -107,6 +144,7 @@ export type Database = {
           link_url?: string | null
           location_targeting?: string | null
           paystack_reference?: string | null
+          reach?: number | null
           reject_reason?: string | null
           spend_amount?: number | null
           start_date?: string | null
