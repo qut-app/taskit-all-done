@@ -29,7 +29,23 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && !authLoading) {
-      navigate('/dashboard');
+      // Check profile completeness before redirecting
+      const checkOnboarding = async () => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed, account_type, active_role, location, gender')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!profile || !profile.onboarding_completed || !profile.account_type || !profile.active_role || !profile.location) {
+          navigate('/onboarding');
+        } else if (profile.account_type === 'individual' && !profile.gender) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
+      };
+      checkOnboarding();
     }
   }, [user, authLoading, navigate]);
 
@@ -81,9 +97,8 @@ const Auth = () => {
         const { error } = await signIn(formData.email, formData.password);
         if (error) {
           toast({ title: 'Error', description: error.message, variant: 'destructive' });
-        } else {
-          navigate('/dashboard');
         }
+        // Redirect is handled by the useEffect that watches user state
       }
     } catch (err) {
       toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
