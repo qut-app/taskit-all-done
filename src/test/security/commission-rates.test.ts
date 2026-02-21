@@ -8,14 +8,16 @@
  * - No hardcoded old rates (0.20, 0.09, 20%, 9%) remain
  */
 import { describe, it, expect } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-// Helper to read file content - resolve from project root
-const readFile = (filePath: string) => {
-  const resolved = path.resolve(process.cwd(), filePath);
-  return fs.readFileSync(resolved, "utf-8");
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = resolve(__dirname, "../../..");
+
+const readFile = (filePath: string) =>
+  readFileSync(resolve(projectRoot, filePath), "utf-8");
 
 describe("Commission Rate Configuration", () => {
   it("MyJobs.tsx should use 0.12 for free users (not 0.20)", () => {
