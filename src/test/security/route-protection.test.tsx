@@ -4,15 +4,20 @@
  * Verifies that all protected routes are wrapped with AuthGuard or AdminGuard.
  */
 import { describe, it, expect } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = resolve(__dirname, "../../..");
+
+const appTsxContent = readFileSync(
+  resolve(projectRoot, "src/App.tsx"),
+  "utf-8"
+);
 
 describe("Route Protection Configuration", () => {
-  const appTsxContent = fs.readFileSync(
-    path.resolve(process.cwd(), "src/App.tsx"),
-    "utf-8"
-  );
-
   const protectedRoutes = [
     "/onboarding",
     "/role-select",
