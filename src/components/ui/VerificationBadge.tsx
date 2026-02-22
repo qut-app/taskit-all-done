@@ -2,8 +2,10 @@ import { motion } from 'framer-motion';
 import { BadgeCheck, Building2, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+type VerificationStatusType = 'unverified' | 'pending' | 'verified' | 'rejected';
+
 interface VerificationBadgeProps {
-  status: 'unverified' | 'pending' | 'verified';
+  status: VerificationStatusType;
   accountType?: 'individual' | 'company';
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
@@ -83,10 +85,10 @@ export function VerificationStatus({
   status,
   className
 }: { 
-  status: 'unverified' | 'pending' | 'verified';
+  status: VerificationStatusType;
   className?: string;
 }) {
-  const config = {
+  const config: Record<VerificationStatusType, { icon: any; label: string; className: string }> = {
     unverified: {
       icon: Shield,
       label: 'Not Verified',
@@ -101,10 +103,15 @@ export function VerificationStatus({
       icon: BadgeCheck,
       label: 'Verified',
       className: 'text-success bg-success/10'
+    },
+    rejected: {
+      icon: Shield,
+      label: 'Rejected',
+      className: 'text-destructive bg-destructive/10'
     }
   };
 
-  const { icon: Icon, label, className: statusClass } = config[status];
+  const { icon: Icon, label, className: statusClass } = config[status] || config.unverified;
 
   return (
     <motion.div 
