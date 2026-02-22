@@ -29,6 +29,7 @@ import { usePaystackPayment } from '@/hooks/usePaystackPayment';
 import { useFeedback } from '@/hooks/useFeedback';
 import { AdManagerTab } from '@/components/profile/AdManagerTab';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
+import { VerificationTab } from '@/components/profile/VerificationTab';
 import { Switch } from '@/components/ui/switch';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { supabase } from '@/integrations/supabase/client';
@@ -403,6 +404,7 @@ const Profile = () => {
               </TabsTrigger>
               <TabsTrigger value="help" className="text-xs">Help</TabsTrigger>
               <TabsTrigger value="feedback" className="text-xs">Feedback</TabsTrigger>
+              <TabsTrigger value="verify" className="text-xs">Verify</TabsTrigger>
               <TabsTrigger value="achievements" className="text-xs">Achievements</TabsTrigger>
               <TabsTrigger value="ads" className="text-xs">Ad Manager</TabsTrigger>
             </TabsList>
@@ -914,6 +916,16 @@ const Profile = () => {
                 </div>
               )}
             </Card>
+          </TabsContent>
+
+          {/* ===== VERIFICATION TAB ===== */}
+          <TabsContent value="verify" className="space-y-4">
+            <VerificationTab
+              verificationStatus={profile.verification_status}
+              accountType={profile.account_type}
+              profile={profile}
+              onVerificationSubmitted={refetch}
+            />
           </TabsContent>
 
           {/* ===== ACHIEVEMENTS TAB ===== */}
