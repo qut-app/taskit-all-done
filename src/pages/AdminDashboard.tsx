@@ -92,6 +92,7 @@ const AdminDashboard = () => {
   const [feedbackView, setFeedbackView] = useState<'analytics' | 'list'>('analytics');
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
   const [boostRejectReasons, setBoostRejectReasons] = useState<Record<string, string>>({});
+  const [verificationFilter, setVerificationFilter] = useState<string>('pending');
   // Loading state
   if (authLoading || adminLoading) {
     return (
@@ -410,32 +411,53 @@ const AdminDashboard = () => {
           <TabsContent value="verifications">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  Pending Verifications
-                  {pendingVerifications.length > 0 && (
-                    <Badge variant="destructive" className="animate-pulse">
-                      {pendingVerifications.length}
-                    </Badge>
-                  )}
-                </CardTitle>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Verifications
+                    {pendingVerifications.length > 0 && (
+                      <Badge variant="destructive" className="animate-pulse">
+                        {pendingVerifications.length} pending
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <Select value={verificationFilter} onValueChange={setVerificationFilter}>
+                    <SelectTrigger className="w-[160px] h-9">
+                      <SelectValue placeholder="Filter status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="unverified">Not Submitted</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="verified">Verified</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : pendingVerifications.length === 0 ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12"
-                  >
-                    <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
-                    <p className="text-muted-foreground">All caught up! No pending verifications.</p>
-                  </motion.div>
-                ) : (
+                {(() => {
+                  const filteredUsers = verificationFilter === 'all' 
+                    ? users 
+                    : users.filter(u => u.verification_status === verificationFilter);
+                  
+                  if (loading) return (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  );
+                  
+                  if (filteredUsers.length === 0) return (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+                      <CheckCircle className="w-12 h-12 text-success mx-auto mb-3" />
+                      <p className="text-muted-foreground">
+                        {verificationFilter === 'pending' ? 'All caught up! No pending verifications.' : `No users with "${verificationFilter}" status.`}
+                      </p>
+                    </motion.div>
+                  );
+                  
+                  return (
                   <AnimatePresence>
-                    {pendingVerifications.map((userItem, index) => (
+                    {filteredUsers.map((userItem, index) => (
                       <motion.div
                         key={userItem.id}
                         initial={{ opacity: 0, x: -20 }}
@@ -468,6 +490,13 @@ const AdminDashboard = () => {
                               </p>
                               <Badge variant="outline" className="text-xs">
                                 {userItem.account_type === 'company' ? 'Company' : 'Individual'}
+                              </Badge>
+                              <Badge variant={
+                                userItem.verification_status === 'verified' ? 'success' :
+                                userItem.verification_status === 'pending' ? 'warning' :
+                                userItem.verification_status === 'rejected' ? 'destructive' : 'secondary'
+                              } className="text-xs">
+                                {userItem.verification_status === 'unverified' ? 'Not Submitted' : userItem.verification_status}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">{userItem.email}</p>
@@ -537,49 +566,60 @@ const AdminDashboard = () => {
                           )}
                         </div>
 
-                        {/* Rejection Reason Input */}
-                        <div className="space-y-2">
-                          <Textarea
-                            placeholder="Rejection reason (required to reject)..."
-                            value={rejectReasons[userItem.user_id] || ''}
-                            onChange={(e) => setRejectReasons(prev => ({ ...prev, [userItem.user_id]: e.target.value }))}
-                            rows={2}
-                            className="text-sm"
-                          />
-                        </div>
+                        {/* Rejected reason display */}
+                        {userItem.verification_status === 'rejected' && userItem.verification_rejection_reason && (
+                          <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+                            <p className="text-xs font-medium text-destructive">Rejection Reason:</p>
+                            <p className="text-sm text-muted-foreground mt-1">{userItem.verification_rejection_reason}</p>
+                          </div>
+                        )}
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-success hover:bg-success/90"
-                            onClick={() => handleApproveVerification(userItem.user_id)}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 text-destructive border-destructive hover:bg-destructive/10"
-                            disabled={!rejectReasons[userItem.user_id]?.trim()}
-                            onClick={() => {
-                              handleRejectVerification(userItem.user_id, rejectReasons[userItem.user_id]);
-                              setRejectReasons(prev => {
-                                const next = { ...prev };
-                                delete next[userItem.user_id];
-                                return next;
-                              });
-                            }}
-                          >
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Reject
-                          </Button>
-                        </div>
+                        {/* Action Buttons - only for pending */}
+                        {userItem.verification_status === 'pending' && (
+                          <>
+                            <div className="space-y-2">
+                              <Textarea
+                                placeholder="Rejection reason (required to reject)..."
+                                value={rejectReasons[userItem.user_id] || ''}
+                                onChange={(e) => setRejectReasons(prev => ({ ...prev, [userItem.user_id]: e.target.value }))}
+                                rows={2}
+                                className="text-sm"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 bg-success hover:bg-success/90"
+                                onClick={() => handleApproveVerification(userItem.user_id)}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 text-destructive border-destructive hover:bg-destructive/10"
+                                disabled={!rejectReasons[userItem.user_id]?.trim()}
+                                onClick={() => {
+                                  handleRejectVerification(userItem.user_id, rejectReasons[userItem.user_id]);
+                                  setRejectReasons(prev => {
+                                    const next = { ...prev };
+                                    delete next[userItem.user_id];
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </motion.div>
                     ))}
                   </AnimatePresence>
-                )}
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
