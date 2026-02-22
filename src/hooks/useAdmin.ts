@@ -127,11 +127,13 @@ export function useAdminData() {
   const approveVerification = async (userId: string) => {
     const { error } = await supabase
       .from('profiles')
-      .update({ verification_status: 'verified' })
+      .update({ 
+        verification_status: 'verified',
+        verification_rejection_reason: null,
+      } as any)
       .eq('user_id', userId);
     
     if (!error) {
-      // Get user profile to determine role
       const userProfile = pendingVerifications.find(u => u.user_id === userId);
       const isProvider = userProfile?.active_role === 'provider';
 
@@ -150,13 +152,26 @@ export function useAdminData() {
     return { error };
   };
 
-  const rejectVerification = async (userId: string) => {
+  const rejectVerification = async (userId: string, reason: string) => {
     const { error } = await supabase
       .from('profiles')
-      .update({ verification_status: 'unverified' })
+      .update({ 
+        verification_status: 'rejected' as any,
+        verification_rejection_reason: reason,
+      } as any)
       .eq('user_id', userId);
     
-    if (!error) await fetchData();
+    if (!error) {
+      // Create in-app notification with rejection reason
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title: '❌ Verification Not Approved',
+        message: `Your verification request was not approved. Reason: ${reason}. You can re-submit your documents from your Profile → Verify tab.`,
+        type: 'verification',
+      });
+
+      await fetchData();
+    }
     return { error };
   };
 

@@ -1036,6 +1036,7 @@ export type Database = {
           sound_notifications_enabled: boolean | null
           updated_at: string
           user_id: string
+          verification_rejection_reason: string | null
           verification_status: Database["public"]["Enums"]["verification_status"]
           wallet_balance: number | null
           wallet_frozen: boolean | null
@@ -1085,6 +1086,7 @@ export type Database = {
           sound_notifications_enabled?: boolean | null
           updated_at?: string
           user_id: string
+          verification_rejection_reason?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           wallet_balance?: number | null
           wallet_frozen?: boolean | null
@@ -1134,6 +1136,7 @@ export type Database = {
           sound_notifications_enabled?: boolean | null
           updated_at?: string
           user_id?: string
+          verification_rejection_reason?: string | null
           verification_status?: Database["public"]["Enums"]["verification_status"]
           wallet_balance?: number | null
           wallet_frozen?: boolean | null
@@ -1788,7 +1791,7 @@ export type Database = {
         | "cancelled"
       service_mode: "online" | "offline" | "both"
       subscription_type: "requester_unlimited" | "provider_slot_boost"
-      verification_status: "unverified" | "pending" | "verified"
+      verification_status: "unverified" | "pending" | "verified" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1920,7 +1923,7 @@ export const Constants = {
       job_status: ["open", "assigned", "in_progress", "completed", "cancelled"],
       service_mode: ["online", "offline", "both"],
       subscription_type: ["requester_unlimited", "provider_slot_boost"],
-      verification_status: ["unverified", "pending", "verified"],
+      verification_status: ["unverified", "pending", "verified", "rejected"],
     },
   },
 } as const

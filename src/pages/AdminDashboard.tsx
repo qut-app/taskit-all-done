@@ -140,12 +140,16 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleRejectVerification = async (userId: string) => {
-    const { error } = await rejectVerification(userId);
+  const handleRejectVerification = async (userId: string, reason: string) => {
+    if (!reason.trim()) {
+      toast({ title: 'Error', description: 'Please provide a rejection reason', variant: 'destructive' });
+      return;
+    }
+    const { error } = await rejectVerification(userId, reason);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: 'Success', description: 'Verification rejected' });
+      toast({ title: 'Success', description: 'Verification rejected with reason' });
     }
   };
 
@@ -415,7 +419,7 @@ const AdminDashboard = () => {
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {loading ? (
                   <div className="flex justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -438,63 +442,114 @@ const AdminDashboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         transition={{ delay: index * 0.05 }}
-                        className="p-4 bg-muted/30 rounded-xl border border-border"
+                        className="p-4 bg-muted/30 rounded-xl border border-border space-y-4"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-primary-foreground font-bold ${
-                              userItem.account_type === 'company' ? 'bg-secondary' : 'bg-primary'
-                            }`}>
-                              {userItem.account_type === 'company' ? (
-                                <Building2 className="w-6 h-6" />
-                              ) : (
-                                userItem.full_name?.charAt(0) || 'U'
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold text-foreground truncate">
-                                  {userItem.company_name || userItem.full_name}
-                                </p>
-                                <Badge variant="outline" className="text-xs">
-                                  {userItem.account_type === 'company' ? 'Company' : 'Individual'}
-                                </Badge>
+                        {/* User Header */}
+                        <div className="flex items-start gap-3">
+                          <div className="relative w-14 h-14 shrink-0">
+                            {userItem.avatar_url ? (
+                              <img src={userItem.avatar_url} alt="Avatar" className="w-14 h-14 rounded-xl object-cover" />
+                            ) : (
+                              <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-primary-foreground font-bold text-lg ${
+                                userItem.account_type === 'company' ? 'bg-secondary' : 'bg-primary'
+                              }`}>
+                                {userItem.account_type === 'company' ? (
+                                  <Building2 className="w-6 h-6" />
+                                ) : (
+                                  userItem.full_name?.charAt(0) || 'U'
+                                )}
                               </div>
-                              <p className="text-sm text-muted-foreground truncate">{userItem.email}</p>
-                              {userItem.account_type === 'company' && userItem.cac_number && (
-                                <p className="text-xs text-muted-foreground mt-1">CAC: {userItem.cac_number}</p>
-                              )}
-                              {userItem.location && (
-                                <p className="text-xs text-muted-foreground mt-1">📍 {userItem.location}</p>
-                              )}
-                            </div>
+                            )}
                           </div>
-                          <div className="flex flex-col gap-2">
-                            {userItem.cac_document_url && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs"
-                                onClick={() => window.open(userItem.cac_document_url, '_blank')}
-                              >
-                                <FileText className="w-3 h-3 mr-1" />
-                                CAC Doc
-                              </Button>
-                            )}
-                            {userItem.face_verification_url && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs"
-                                onClick={() => window.open(userItem.face_verification_url, '_blank')}
-                              >
-                                <Eye className="w-3 h-3 mr-1" />
-                                Photo
-                              </Button>
-                            )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-foreground">
+                                {userItem.company_name || userItem.full_name}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {userItem.account_type === 'company' ? 'Company' : 'Individual'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{userItem.email}</p>
                           </div>
                         </div>
-                        <div className="flex gap-2 mt-4">
+
+                        {/* User Details Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          {userItem.phone && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <span className="text-xs">📞</span>
+                              <span className="truncate">{userItem.phone}</span>
+                            </div>
+                          )}
+                          {userItem.location && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <span className="text-xs">📍</span>
+                              <span className="truncate">{userItem.location}</span>
+                            </div>
+                          )}
+                          {userItem.account_type === 'company' && userItem.cac_number && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>CAC: {userItem.cac_number}</span>
+                            </div>
+                          )}
+                          {userItem.account_type !== 'company' && userItem.national_id_number && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Shield className="w-3.5 h-3.5" />
+                              <span>NIN: {userItem.national_id_number}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                            <span className="text-xs">📅</span>
+                            <span>Submitted: {new Date(userItem.updated_at || userItem.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Document Previews */}
+                        <div className="flex gap-2 flex-wrap">
+                          {userItem.face_verification_url && (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <div className="w-20 h-20 rounded-lg border border-border overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+                                  <img src={userItem.face_verification_url} alt="Face verification" className="w-full h-full object-cover" />
+                                </div>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle>Face Verification Photo</DialogTitle>
+                                  <DialogDescription>{userItem.full_name}</DialogDescription>
+                                </DialogHeader>
+                                <img src={userItem.face_verification_url} alt="Face verification" className="w-full rounded-lg" />
+                              </DialogContent>
+                            </Dialog>
+                          )}
+                          {userItem.cac_document_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-20 px-4 flex flex-col gap-1"
+                              onClick={() => window.open(userItem.cac_document_url, '_blank')}
+                            >
+                              <FileText className="w-6 h-6 text-muted-foreground" />
+                              <span className="text-xs">View CAC</span>
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Rejection Reason Input */}
+                        <div className="space-y-2">
+                          <Textarea
+                            placeholder="Rejection reason (required to reject)..."
+                            value={rejectReasons[userItem.user_id] || ''}
+                            onChange={(e) => setRejectReasons(prev => ({ ...prev, [userItem.user_id]: e.target.value }))}
+                            rows={2}
+                            className="text-sm"
+                          />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
                             className="flex-1 bg-success hover:bg-success/90"
@@ -507,7 +562,15 @@ const AdminDashboard = () => {
                             size="sm"
                             variant="outline"
                             className="flex-1 text-destructive border-destructive hover:bg-destructive/10"
-                            onClick={() => handleRejectVerification(userItem.user_id)}
+                            disabled={!rejectReasons[userItem.user_id]?.trim()}
+                            onClick={() => {
+                              handleRejectVerification(userItem.user_id, rejectReasons[userItem.user_id]);
+                              setRejectReasons(prev => {
+                                const next = { ...prev };
+                                delete next[userItem.user_id];
+                                return next;
+                              });
+                            }}
                           >
                             <XCircle className="w-4 h-4 mr-1" />
                             Reject

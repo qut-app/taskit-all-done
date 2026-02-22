@@ -180,8 +180,13 @@ export const VerificationTab = ({
             <XCircle className="w-5 h-5 text-destructive mt-0.5" />
             <div>
               <h4 className="font-medium text-foreground text-sm">Verification Rejected</h4>
+              {profile?.verification_rejection_reason && (
+                <p className="text-sm text-destructive mt-1 font-medium">
+                  Reason: {profile.verification_rejection_reason}
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
-                Your previous verification submission was not approved. Please review your documents and re-submit.
+                Please review your documents and re-submit below.
               </p>
             </div>
           </div>

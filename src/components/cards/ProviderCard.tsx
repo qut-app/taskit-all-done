@@ -12,7 +12,7 @@ type ProviderProfile = Tables<'provider_profiles'>;
 interface Profile {
   full_name: string;
   location?: string | null;
-  verification_status: 'unverified' | 'pending' | 'verified';
+  verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
   account_type?: string | null;
   company_name?: string | null;
   avatar_url?: string | null;
